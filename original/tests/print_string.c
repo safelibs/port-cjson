@@ -43,9 +43,18 @@ static void print_string_should_print_empty_strings(void)
     assert_print_string("\"\"", "");
 }
 
-static void print_string_should_reject_null_input(void)
+static void print_string_should_print_null_references_as_empty_strings(void)
 {
-    TEST_ASSERT_NULL(cJSON_CreateString(NULL));
+    cJSON *item = cJSON_CreateStringReference(NULL);
+    char *printed = NULL;
+
+    TEST_ASSERT_NOT_NULL_MESSAGE(item, "Failed to create string reference item.");
+    printed = cJSON_PrintUnformatted(item);
+    TEST_ASSERT_NOT_NULL_MESSAGE(printed, "Failed to print string reference.");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("\"\"", printed, "NULL string references should print as empty strings.");
+
+    cJSON_free(printed);
+    cJSON_Delete(item);
 }
 
 static void print_string_should_print_ascii(void)
@@ -74,7 +83,7 @@ int CJSON_CDECL main(void)
     UNITY_BEGIN();
 
     RUN_TEST(print_string_should_print_empty_strings);
-    RUN_TEST(print_string_should_reject_null_input);
+    RUN_TEST(print_string_should_print_null_references_as_empty_strings);
     RUN_TEST(print_string_should_print_ascii);
     RUN_TEST(print_string_should_print_utf8);
 
