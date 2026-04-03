@@ -26,6 +26,8 @@ typedef struct
     bench_entry *entries;
     size_t count;
     size_t print_ready_count;
+    size_t total_payload_bytes;
+    size_t print_ready_payload_bytes;
 } bench_corpus;
 
 static void fail(const char *message, const char *detail)
@@ -330,6 +332,7 @@ static void append_entry(bench_corpus *corpus, const char *name, char *storage, 
     }
     entry->print_prebuffer = (int)entry->payload_length + 32;
     corpus->count++;
+    corpus->total_payload_bytes += entry->payload_length;
 }
 
 static void load_directory(bench_corpus *corpus, const char *directory, int strip_fuzz_prefix)
@@ -383,6 +386,7 @@ static void prepare_print_inputs(bench_corpus *corpus)
         {
             corpus->entries[index].parsed = parsed;
             corpus->print_ready_count++;
+            corpus->print_ready_payload_bytes += corpus->entries[index].payload_length;
         }
     }
 
@@ -540,6 +544,8 @@ static void destroy_corpus(bench_corpus *corpus)
     corpus->entries = NULL;
     corpus->count = 0;
     corpus->print_ready_count = 0;
+    corpus->total_payload_bytes = 0;
+    corpus->print_ready_payload_bytes = 0;
 }
 
 static unsigned long parse_iterations(const char *text)
@@ -615,11 +621,13 @@ int main(int argc, char **argv)
     }
 
     printf(
-        "mode=%s iterations=%lu corpus=%lu print_ready=%lu checksum=%lu\n",
+        "mode=%s iterations=%lu corpus=%lu payload_bytes=%lu print_ready=%lu print_ready_bytes=%lu checksum=%lu\n",
         mode,
         iterations,
         (unsigned long)corpus.count,
+        (unsigned long)corpus.total_payload_bytes,
         (unsigned long)corpus.print_ready_count,
+        (unsigned long)corpus.print_ready_payload_bytes,
         checksum
     );
 

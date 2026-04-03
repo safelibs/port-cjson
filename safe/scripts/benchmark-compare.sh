@@ -175,8 +175,8 @@ import subprocess
 import sys
 import time
 
-TARGET_SECONDS = 0.20
-MAX_ITERATIONS = 512
+TARGET_SECONDS = 0.30
+MAX_ITERATIONS = 4096
 RUNS = 5
 TIMEOUT_SECONDS = 120.0
 
@@ -261,7 +261,7 @@ workloads = [
     {
         "name": "parse",
         "binary_kind": "core",
-        "threshold": 3.0,
+        "threshold": 1.6,
         "args": [
             "parse",
             os.environ["TESTS_INPUT_DIR"],
@@ -271,7 +271,7 @@ workloads = [
     {
         "name": "print_unformatted",
         "binary_kind": "core",
-        "threshold": 3.0,
+        "threshold": 1.5,
         "args": [
             "print-unformatted",
             os.environ["TESTS_INPUT_DIR"],
@@ -281,7 +281,7 @@ workloads = [
     {
         "name": "print_buffered",
         "binary_kind": "core",
-        "threshold": 3.0,
+        "threshold": 1.5,
         "args": [
             "print-buffered",
             os.environ["TESTS_INPUT_DIR"],
@@ -291,7 +291,7 @@ workloads = [
     {
         "name": "minify",
         "binary_kind": "core",
-        "threshold": 3.0,
+        "threshold": 1.5,
         "args": [
             "minify",
             os.environ["TESTS_INPUT_DIR"],
@@ -301,7 +301,7 @@ workloads = [
     {
         "name": "apply_patches",
         "binary_kind": "utils",
-        "threshold": 4.0,
+        "threshold": 1.5,
         "args": [
             "apply",
             os.environ["PATCH_TESTS_JSON"],
@@ -312,7 +312,7 @@ workloads = [
     {
         "name": "generate_patches",
         "binary_kind": "utils",
-        "threshold": 4.0,
+        "threshold": 1.5,
         "args": [
             "generate",
             os.environ["PATCH_TESTS_JSON"],
@@ -323,7 +323,7 @@ workloads = [
     {
         "name": "generate_merge_patch",
         "binary_kind": "utils",
-        "threshold": 4.0,
+        "threshold": 1.5,
         "args": [
             "merge",
             os.environ["PATCH_TESTS_JSON"],
@@ -363,12 +363,14 @@ for workload in workloads:
     original_median = statistics.median(original_runs)
     safe_median = statistics.median(safe_runs)
     ratio = safe_median / max(original_median, 1e-9)
-    passed = ratio <= workload["threshold"]
+    outputs_match = original_output == safe_output
+    passed = outputs_match and (ratio <= workload["threshold"])
 
     result = {
         "name": workload["name"],
         "iterations": iterations,
         "threshold": workload["threshold"],
+        "calibration_seconds": calibration_elapsed,
         "original_median_seconds": original_median,
         "safe_median_seconds": safe_median,
         "safe_over_original_ratio": ratio,
@@ -376,7 +378,14 @@ for workload in workloads:
         "safe_runs_seconds": safe_runs,
         "original_output": original_output,
         "safe_output": safe_output,
-        "status": "pass" if passed else "threshold_exceeded",
+        "outputs_match": outputs_match,
+        "status": (
+            "pass"
+            if passed
+            else "output_mismatch"
+            if not outputs_match
+            else "threshold_exceeded"
+        ),
     }
     results.append(result)
     if not passed:
@@ -403,8 +412,10 @@ summary = {
     "violations": [
         {
             "name": result["name"],
+            "status": result["status"],
             "threshold": result["threshold"],
             "safe_over_original_ratio": result["safe_over_original_ratio"],
+            "outputs_match": result["outputs_match"],
         }
         for result in violations
     ],

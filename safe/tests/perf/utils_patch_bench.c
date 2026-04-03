@@ -31,6 +31,10 @@ typedef struct
     size_t apply_count;
     diff_case *diff_cases;
     size_t diff_count;
+    unsigned long apply_doc_nodes;
+    unsigned long apply_patch_nodes;
+    unsigned long diff_from_nodes;
+    unsigned long diff_to_nodes;
 } bench_state;
 
 static void fail(const char *message, const char *detail)
@@ -163,6 +167,23 @@ static char *make_case_name(const char *path, size_t index)
     return xstrdup(buffer);
 }
 
+static unsigned long count_nodes(const cJSON *item)
+{
+    unsigned long total = 0;
+
+    while (item != NULL)
+    {
+        total++;
+        if (item->child != NULL)
+        {
+            total += count_nodes(item->child);
+        }
+        item = item->next;
+    }
+
+    return total;
+}
+
 static void append_apply_case(
     bench_state *state,
     const char *name,
@@ -184,6 +205,8 @@ static void append_apply_case(
     slot->patch = duplicate_or_fail(patch, name);
     slot->expect_error = expect_error;
     state->apply_count++;
+    state->apply_doc_nodes += count_nodes(doc);
+    state->apply_patch_nodes += count_nodes(patch);
 }
 
 static void append_diff_case(bench_state *state, const char *name, const cJSON *from, const cJSON *to)
@@ -200,6 +223,8 @@ static void append_diff_case(bench_state *state, const char *name, const cJSON *
     slot->from = duplicate_or_fail(from, name);
     slot->to = duplicate_or_fail(to, name);
     state->diff_count++;
+    state->diff_from_nodes += count_nodes(from);
+    state->diff_to_nodes += count_nodes(to);
 }
 
 static void load_fixture_file(bench_state *state, const char *path)
@@ -421,23 +446,6 @@ static void append_large_generated_cases(bench_state *state)
     cJSON_Delete(patch);
 }
 
-static unsigned long count_nodes(const cJSON *item)
-{
-    unsigned long total = 0;
-
-    while (item != NULL)
-    {
-        total++;
-        if (item->child != NULL)
-        {
-            total += count_nodes(item->child);
-        }
-        item = item->next;
-    }
-
-    return total;
-}
-
 static unsigned long run_apply(const bench_state *state, unsigned long iterations)
 {
     unsigned long checksum = 0;
@@ -574,6 +582,10 @@ static void destroy_state(bench_state *state)
     state->diff_cases = NULL;
     state->apply_count = 0;
     state->diff_count = 0;
+    state->apply_doc_nodes = 0;
+    state->apply_patch_nodes = 0;
+    state->diff_from_nodes = 0;
+    state->diff_to_nodes = 0;
 }
 
 static unsigned long parse_iterations(const char *text)
@@ -650,11 +662,15 @@ int main(int argc, char **argv)
     }
 
     printf(
-        "mode=%s iterations=%lu apply_cases=%lu diff_cases=%lu checksum=%lu\n",
+        "mode=%s iterations=%lu apply_cases=%lu apply_doc_nodes=%lu apply_patch_nodes=%lu diff_cases=%lu diff_from_nodes=%lu diff_to_nodes=%lu checksum=%lu\n",
         mode,
         iterations,
         (unsigned long)state.apply_count,
+        state.apply_doc_nodes,
+        state.apply_patch_nodes,
         (unsigned long)state.diff_count,
+        state.diff_from_nodes,
+        state.diff_to_nodes,
         checksum
     );
 
