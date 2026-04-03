@@ -114,6 +114,16 @@ static void cjson_parse_with_length_opts_should_parse_a_bounded_buffer(void)
     cJSON_Delete(item);
 }
 
+static void cjson_parse_with_length_opts_should_report_zero_length_failure_at_start(void)
+{
+    const char input[] = "{}";
+    const char *parse_end = input + 1;
+
+    TEST_ASSERT_NULL(cJSON_ParseWithLengthOpts(input, 0, &parse_end, false));
+    TEST_ASSERT_EQUAL_PTR(input, parse_end);
+    TEST_ASSERT_EQUAL_PTR(input, cJSON_GetErrorPtr());
+}
+
 static void cjson_parse_with_length_opts_should_require_null_termination_within_length(void)
 {
     const char input[] = "{}";
@@ -218,6 +228,7 @@ int CJSON_CDECL main(void)
     RUN_TEST(cjson_create_true_should_create_a_true_boolean);
     RUN_TEST(cjson_create_bool_should_create_requested_boolean_value);
     RUN_TEST(cjson_parse_with_length_opts_should_parse_a_bounded_buffer);
+    RUN_TEST(cjson_parse_with_length_opts_should_report_zero_length_failure_at_start);
     RUN_TEST(cjson_parse_with_length_opts_should_require_null_termination_within_length);
     RUN_TEST(cjson_set_int_value_should_update_number_value_and_printed_output);
     RUN_TEST(cjson_print_buffered_should_match_standard_print_functions);

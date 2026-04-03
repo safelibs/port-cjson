@@ -382,7 +382,15 @@ pub unsafe extern "C" fn cJSON_ParseWithLengthOpts(
 
     clear_parse_error();
 
-    if value.is_null() || buffer_length == 0 {
+    if value.is_null() {
+        return ptr::null_mut();
+    }
+
+    if buffer_length == 0 {
+        if !return_parse_end.is_null() {
+            *return_parse_end = value;
+        }
+        set_parse_error(value);
         return ptr::null_mut();
     }
 

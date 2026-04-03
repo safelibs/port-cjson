@@ -51,11 +51,12 @@ function(add_safe_test test_name)
 
     if(MEMORYCHECK_COMMAND)
         add_test(NAME "${test_name}"
-            COMMAND "${MEMORYCHECK_COMMAND}" ${MEMORYCHECK_COMMAND_OPTIONS} "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
+            COMMAND "${MEMORYCHECK_COMMAND}" ${MEMORYCHECK_COMMAND_OPTIONS} "$<TARGET_FILE:${test_name}>")
     else()
         add_test(NAME "${test_name}"
-            COMMAND "./${test_name}")
+            COMMAND "$<TARGET_FILE:${test_name}>")
     endif()
+    set_tests_properties("${test_name}" PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endfunction()
 
 function(add_safe_unity_test test_name source_file)
