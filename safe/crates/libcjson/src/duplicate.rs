@@ -7,7 +7,6 @@ use crate::hooks::{duplicate_c_string, new_item};
 
 #[no_mangle]
 pub unsafe extern "C" fn cJSON_Duplicate(item: *const cJSON, recurse: c_int) -> *mut cJSON {
-    let newitem: *mut cJSON;
     let mut child: *mut cJSON;
     let mut next: *mut cJSON = ptr::null_mut();
     let mut newchild: *mut cJSON;
@@ -16,7 +15,7 @@ pub unsafe extern "C" fn cJSON_Duplicate(item: *const cJSON, recurse: c_int) -> 
         return ptr::null_mut();
     }
 
-    newitem = new_item();
+    let newitem: *mut cJSON = new_item();
     if newitem.is_null() {
         return ptr::null_mut();
     }

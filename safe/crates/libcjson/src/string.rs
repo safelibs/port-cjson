@@ -6,6 +6,8 @@ use crate::hooks::duplicate_bytes_with_hooks;
 use crate::parse::ParseBuffer;
 use crate::print::{ensure, PrintBuffer};
 
+const EMPTY_JSON_STRING: [u8; 3] = [b'"', b'"', 0];
+
 fn parse_hex4(input: &[u8]) -> Option<u16> {
     if input.len() < 4 {
         return None;
@@ -151,7 +153,7 @@ pub(crate) unsafe fn print_string_ptr(input: *const u8, output_buffer: &mut Prin
             return false;
         }
 
-        ptr::copy_nonoverlapping(b"\"\"\0".as_ptr(), output, 3);
+        ptr::copy_nonoverlapping(EMPTY_JSON_STRING.as_ptr(), output, EMPTY_JSON_STRING.len());
         return true;
     }
 

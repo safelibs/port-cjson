@@ -53,13 +53,11 @@ pub unsafe fn allocate(size: usize) -> *mut c_void {
 }
 
 pub unsafe fn deallocate(pointer: *mut c_void) {
-    let hooks: InternalHooks;
-
     if pointer.is_null() {
         return;
     }
 
-    hooks = current_hooks();
+    let hooks: InternalHooks = current_hooks();
     (hooks.deallocate)(pointer);
 }
 

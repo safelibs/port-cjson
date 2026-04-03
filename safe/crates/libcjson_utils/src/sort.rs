@@ -10,8 +10,6 @@ pub(crate) unsafe fn sort_object(object: *mut cJSON, case_sensitive: bool) {
         (*object).child
     };
     let mut entries: Vec<*mut cJSON> = Vec::new();
-    let already_sorted: bool;
-    let last_index: usize;
     let mut index = 0usize;
 
     if object.is_null() {
@@ -27,7 +25,7 @@ pub(crate) unsafe fn sort_object(object: *mut cJSON, case_sensitive: bool) {
         return;
     }
 
-    already_sorted = entries.windows(2).all(|window| {
+    let already_sorted = entries.windows(2).all(|window| {
         compare_strings((*window[0]).string, (*window[1]).string, case_sensitive) < 0
     });
     if already_sorted {
@@ -45,7 +43,7 @@ pub(crate) unsafe fn sort_object(object: *mut cJSON, case_sensitive: bool) {
         }
     });
 
-    last_index = entries.len() - 1;
+    let last_index = entries.len() - 1;
     while index < entries.len() {
         (*entries[index]).next = if index + 1 < entries.len() {
             entries[index + 1]

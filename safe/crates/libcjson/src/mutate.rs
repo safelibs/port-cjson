@@ -97,13 +97,11 @@ pub unsafe extern "C" fn cJSON_AddItemReferenceToArray(
     array: *mut cJSON,
     item: *mut cJSON,
 ) -> c_int {
-    let reference: *mut cJSON;
-
     if array.is_null() || array == item {
         return 0;
     }
 
-    reference = create_reference(item);
+    let reference: *mut cJSON = create_reference(item);
     if reference.is_null() {
         return 0;
     }
@@ -117,13 +115,11 @@ pub unsafe extern "C" fn cJSON_AddItemReferenceToObject(
     string: *const c_char,
     item: *mut cJSON,
 ) -> c_int {
-    let reference: *mut cJSON;
-
     if object.is_null() || string.is_null() || object == item {
         return 0;
     }
 
-    reference = create_reference(item);
+    let reference: *mut cJSON = create_reference(item);
     if reference.is_null() {
         return 0;
     }

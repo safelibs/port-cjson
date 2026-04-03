@@ -67,7 +67,6 @@ pub(crate) unsafe fn generate_merge_patch(
 ) -> *mut cJSON {
     let mut from_child;
     let mut to_child;
-    let patch;
 
     if to.is_null() {
         return cJSON_CreateNull();
@@ -80,7 +79,7 @@ pub(crate) unsafe fn generate_merge_patch(
     sort_object(from, case_sensitive);
     sort_object(to, case_sensitive);
 
-    patch = cJSON_CreateObject();
+    let patch = cJSON_CreateObject();
     if patch.is_null() {
         return ptr::null_mut();
     }

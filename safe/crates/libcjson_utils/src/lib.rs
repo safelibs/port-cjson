@@ -179,6 +179,9 @@ pub(crate) unsafe fn is_null(item: *const cJSON) -> bool {
     item_type(item) == cJSON_NULL
 }
 
+/// # Safety
+/// `object` and `pointer` must follow the cJSON API contract and point to valid
+/// data for the duration of the lookup.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_GetPointer(
     object: *mut cJSON,
@@ -187,6 +190,9 @@ pub unsafe extern "C" fn cJSONUtils_GetPointer(
     pointer::get_item_from_pointer(object, pointer, false)
 }
 
+/// # Safety
+/// `object` and `pointer` must follow the cJSON API contract and point to valid
+/// data for the duration of the lookup.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_GetPointerCaseSensitive(
     object: *mut cJSON,
@@ -195,6 +201,8 @@ pub unsafe extern "C" fn cJSONUtils_GetPointerCaseSensitive(
     pointer::get_item_from_pointer(object, pointer, true)
 }
 
+/// # Safety
+/// `from` and `to` must be valid `cJSON` trees per the cJSON API contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_GeneratePatches(
     from: *mut cJSON,
@@ -203,6 +211,8 @@ pub unsafe extern "C" fn cJSONUtils_GeneratePatches(
     patch::generate_patches(from, to, false)
 }
 
+/// # Safety
+/// `from` and `to` must be valid `cJSON` trees per the cJSON API contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_GeneratePatchesCaseSensitive(
     from: *mut cJSON,
@@ -211,6 +221,9 @@ pub unsafe extern "C" fn cJSONUtils_GeneratePatchesCaseSensitive(
     patch::generate_patches(from, to, true)
 }
 
+/// # Safety
+/// `array`, `operation`, `path`, and `value` must satisfy the cJSON API
+/// contract; string pointers must be valid NUL-terminated strings.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_AddPatchToArray(
     array: *mut cJSON,
@@ -221,6 +234,9 @@ pub unsafe extern "C" fn cJSONUtils_AddPatchToArray(
     patch::add_patch_to_array(array, operation, path, value);
 }
 
+/// # Safety
+/// `object` and `patches` must point to valid `cJSON` values per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_ApplyPatches(
     object: *mut cJSON,
@@ -229,6 +245,9 @@ pub unsafe extern "C" fn cJSONUtils_ApplyPatches(
     patch::apply_patches(object, patches, false)
 }
 
+/// # Safety
+/// `object` and `patches` must point to valid `cJSON` values per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_ApplyPatchesCaseSensitive(
     object: *mut cJSON,
@@ -237,6 +256,9 @@ pub unsafe extern "C" fn cJSONUtils_ApplyPatchesCaseSensitive(
     patch::apply_patches(object, patches, true)
 }
 
+/// # Safety
+/// `target` and `patch` must point to valid `cJSON` values per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_MergePatch(
     target: *mut cJSON,
@@ -245,6 +267,9 @@ pub unsafe extern "C" fn cJSONUtils_MergePatch(
     merge_patch::merge_patch(target, patch, false)
 }
 
+/// # Safety
+/// `target` and `patch` must point to valid `cJSON` values per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_MergePatchCaseSensitive(
     target: *mut cJSON,
@@ -253,6 +278,8 @@ pub unsafe extern "C" fn cJSONUtils_MergePatchCaseSensitive(
     merge_patch::merge_patch(target, patch, true)
 }
 
+/// # Safety
+/// `from` and `to` must be valid `cJSON` trees per the cJSON API contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_GenerateMergePatch(
     from: *mut cJSON,
@@ -261,6 +288,8 @@ pub unsafe extern "C" fn cJSONUtils_GenerateMergePatch(
     merge_patch::generate_merge_patch(from, to, false)
 }
 
+/// # Safety
+/// `from` and `to` must be valid `cJSON` trees per the cJSON API contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_GenerateMergePatchCaseSensitive(
     from: *mut cJSON,
@@ -269,6 +298,9 @@ pub unsafe extern "C" fn cJSONUtils_GenerateMergePatchCaseSensitive(
     merge_patch::generate_merge_patch(from, to, true)
 }
 
+/// # Safety
+/// `object` and `target` must point to valid `cJSON` values per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_FindPointerFromObjectTo(
     object: *const cJSON,
@@ -277,11 +309,17 @@ pub unsafe extern "C" fn cJSONUtils_FindPointerFromObjectTo(
     pointer::find_pointer_from_object_to(object, target)
 }
 
+/// # Safety
+/// `object` must point to a valid mutable cJSON object per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_SortObject(object: *mut cJSON) {
     sort::sort_object(object, false);
 }
 
+/// # Safety
+/// `object` must point to a valid mutable cJSON object per the cJSON API
+/// contract.
 #[no_mangle]
 pub unsafe extern "C" fn cJSONUtils_SortObjectCaseSensitive(object: *mut cJSON) {
     sort::sort_object(object, true);

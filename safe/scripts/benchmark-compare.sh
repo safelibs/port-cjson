@@ -58,9 +58,30 @@ build_source_dir() {
     sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$1/CMakeCache.txt" | tail -n1
 }
 
+cargo_profile_name() {
+    local build_type
+
+    build_type=$(sed -n 's/^CMAKE_BUILD_TYPE:STRING=//p' "$1/CMakeCache.txt" | tail -n1)
+    case "$build_type" in
+        Release|RelWithDebInfo|MinSizeRel)
+            printf 'release'
+            ;;
+        *)
+            printf 'debug'
+            ;;
+    esac
+}
+
 locate_library_dir() {
     local build_dir=$1
+    local profile_dir
     local library_path
+
+    profile_dir="$build_dir/cargo-target/$(cargo_profile_name "$build_dir")"
+    if [ -e "$profile_dir/libcjson.so.1" ] && [ -e "$profile_dir/libcjson_utils.so.1" ]; then
+        printf '%s\n' "$profile_dir"
+        return
+    fi
 
     library_path=$(find "$build_dir" -maxdepth 4 \( -type f -o -type l \) \( -name 'libcjson.so' -o -name 'libcjson.so.*' \) | sort | head -n1 || true)
     [[ -n "$library_path" ]] || fail "failed to locate libcjson.so under $build_dir"

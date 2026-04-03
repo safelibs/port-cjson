@@ -171,7 +171,7 @@ pub unsafe fn parse_number_token(input: &[u8]) -> NumberParseResult {
     let mut end = ptr::null_mut();
     let number = strtod(start, &mut end);
     let consumed = end.offset_from(start) as usize;
-    if end == start as *mut c_char {
+    if ptr::eq(end, start) {
         return NumberParseResult::Failure { error_offset: 0 };
     }
 
@@ -221,9 +221,7 @@ pub unsafe fn print_number_bytes(item: *const cJSON) -> Option<Vec<u8>> {
 
         let mut end = ptr::null_mut();
         let test = strtod(buffer.as_ptr(), &mut end);
-        if end != buffer.as_ptr().add(length as usize) as *mut c_char
-            || !compare_double(test, number)
-        {
+        if !ptr::eq(end, buffer.as_ptr().add(length as usize)) || !compare_double(test, number) {
             length = snprintf(
                 buffer.as_mut_ptr(),
                 buffer.len(),
@@ -269,10 +267,6 @@ pub unsafe extern "C" fn cJSON_SetValuestring(
     object: *mut cJSON,
     valuestring: *const c_char,
 ) -> *mut c_char {
-    let old_length: usize;
-    let new_length: usize;
-    let copy: *mut c_char;
-
     if object.is_null()
         || ((*object).type_ & cJSON_String) == 0
         || ((*object).type_ & cJSON_IsReference) != 0
@@ -284,16 +278,16 @@ pub unsafe extern "C" fn cJSON_SetValuestring(
         return ptr::null_mut();
     }
 
-    old_length = std::ffi::CStr::from_ptr((*object).valuestring)
+    let old_length: usize = std::ffi::CStr::from_ptr((*object).valuestring)
         .to_bytes()
         .len();
-    new_length = std::ffi::CStr::from_ptr(valuestring).to_bytes().len();
+    let new_length: usize = std::ffi::CStr::from_ptr(valuestring).to_bytes().len();
     if new_length <= old_length {
         ptr::copy_nonoverlapping(valuestring, (*object).valuestring, new_length + 1);
         return (*object).valuestring;
     }
 
-    copy = duplicate_c_string(valuestring);
+    let copy: *mut c_char = duplicate_c_string(valuestring);
     if copy.is_null() {
         return ptr::null_mut();
     }

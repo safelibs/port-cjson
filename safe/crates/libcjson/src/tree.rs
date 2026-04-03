@@ -9,13 +9,11 @@ pub unsafe fn cast_away_const<T>(pointer: *const T) -> *mut T {
 }
 
 pub unsafe fn create_reference(item: *const cJSON) -> *mut cJSON {
-    let reference: *mut cJSON;
-
     if item.is_null() {
         return ptr::null_mut();
     }
 
-    reference = new_item();
+    let reference: *mut cJSON = new_item();
     if reference.is_null() {
         return ptr::null_mut();
     }

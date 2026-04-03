@@ -193,8 +193,6 @@ fn split_parent_child(path: &[u8]) -> Option<(&[u8], &[u8])> {
 
 unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: bool) -> c_int {
     let path = get_patch_member(patch, PATH_KEY, case_sensitive);
-    let path_bytes;
-    let opcode;
     let mut value: *mut cJSON;
     let mut status = 0;
 
@@ -206,8 +204,8 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
         return 2;
     }
 
-    path_bytes = bytes_from_c_string((*path).valuestring);
-    opcode = decode_patch_operation(patch, case_sensitive);
+    let path_bytes = bytes_from_c_string((*path).valuestring);
+    let opcode = decode_patch_operation(patch, case_sensitive);
     if opcode == PatchOperation::Invalid {
         return 3;
     }
@@ -243,19 +241,17 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
 
         if opcode == PatchOperation::Replace || opcode == PatchOperation::Add {
             let replacement = get_patch_member(patch, VALUE_KEY, case_sensitive);
-            let duplicated;
-            let replacement_item;
 
             if replacement.is_null() {
                 return 7;
             }
 
-            duplicated = cJSON_Duplicate(replacement, 1);
+            let duplicated = cJSON_Duplicate(replacement, 1);
             if duplicated.is_null() {
                 return 8;
             }
 
-            replacement_item = ptr::read(duplicated);
+            let replacement_item = ptr::read(duplicated);
             overwrite_item(object, replacement_item);
             cJSON_free(duplicated as *mut c_void);
 
@@ -612,13 +608,11 @@ pub(crate) unsafe fn generate_patches(
     to: *mut cJSON,
     case_sensitive: bool,
 ) -> *mut cJSON {
-    let patches;
-
     if from.is_null() || to.is_null() {
         return ptr::null_mut();
     }
 
-    patches = cJSON_CreateArray();
+    let patches = cJSON_CreateArray();
     if patches.is_null() {
         return ptr::null_mut();
     }

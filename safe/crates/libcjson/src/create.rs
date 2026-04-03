@@ -135,13 +135,11 @@ pub unsafe extern "C" fn cJSON_CreateArrayReference(child: *const cJSON) -> *mut
 
 #[no_mangle]
 pub unsafe extern "C" fn cJSON_CreateIntArray(numbers: *const c_int, count: c_int) -> *mut cJSON {
-    let array: *mut cJSON;
-
     if count < 0 || numbers.is_null() {
         return ptr::null_mut();
     }
 
-    array = cJSON_CreateArray();
+    let array: *mut cJSON = cJSON_CreateArray();
     if array.is_null() {
         return ptr::null_mut();
     }
@@ -159,13 +157,11 @@ pub unsafe extern "C" fn cJSON_CreateIntArray(numbers: *const c_int, count: c_in
 
 #[no_mangle]
 pub unsafe extern "C" fn cJSON_CreateFloatArray(numbers: *const f32, count: c_int) -> *mut cJSON {
-    let array: *mut cJSON;
-
     if count < 0 || numbers.is_null() {
         return ptr::null_mut();
     }
 
-    array = cJSON_CreateArray();
+    let array: *mut cJSON = cJSON_CreateArray();
     if array.is_null() {
         return ptr::null_mut();
     }
@@ -186,13 +182,11 @@ pub unsafe extern "C" fn cJSON_CreateDoubleArray(
     numbers: *const c_double,
     count: c_int,
 ) -> *mut cJSON {
-    let array: *mut cJSON;
-
     if count < 0 || numbers.is_null() {
         return ptr::null_mut();
     }
 
-    array = cJSON_CreateArray();
+    let array: *mut cJSON = cJSON_CreateArray();
     if array.is_null() {
         return ptr::null_mut();
     }
@@ -213,13 +207,11 @@ pub unsafe extern "C" fn cJSON_CreateStringArray(
     strings: *const *const c_char,
     count: c_int,
 ) -> *mut cJSON {
-    let array: *mut cJSON;
-
     if count < 0 || strings.is_null() {
         return ptr::null_mut();
     }
 
-    array = cJSON_CreateArray();
+    let array: *mut cJSON = cJSON_CreateArray();
     if array.is_null() {
         return ptr::null_mut();
     }

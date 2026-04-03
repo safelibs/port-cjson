@@ -89,13 +89,11 @@ pub unsafe fn get_object_item(
 }
 
 pub unsafe fn add_item_to_array_internal(array: *mut cJSON, item: *mut cJSON) -> cJSON_bool {
-    let child: *mut cJSON;
-
     if item.is_null() || array.is_null() || array == item {
         return 0;
     }
 
-    child = (*array).child;
+    let child: *mut cJSON = (*array).child;
     if child.is_null() {
         (*array).child = item;
         (*item).prev = item;
@@ -267,13 +265,11 @@ pub unsafe extern "C" fn cJSON_InsertItemInArray(
     which: c_int,
     newitem: *mut cJSON,
 ) -> cJSON_bool {
-    let after_inserted: *mut cJSON;
-
     if which < 0 || newitem.is_null() || array.is_null() || array == newitem {
         return 0;
     }
 
-    after_inserted = get_array_item(array, which as usize);
+    let after_inserted: *mut cJSON = get_array_item(array, which as usize);
     if after_inserted.is_null() {
         return add_item_to_array_internal(array, newitem);
     }
