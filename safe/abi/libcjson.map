@@ -1,4 +1,4 @@
-LIBCJSON_1.7.17 {
+{
   global:
     cJSON_AddArrayToObject;
     cJSON_AddBoolToObject;

@@ -41,6 +41,15 @@ expect_contains() {
     grep -F "$needle" "$file" >/dev/null || fail "expected '$needle' in $file"
 }
 
+compile_with_pkg_config() {
+    local package=$1
+    local source=$2
+    local output=$3
+    PKG_CONFIG_PATH="$INSTALL_DIR/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" \
+        "${CC:-cc}" "$source" -o "$output" \
+        $(PKG_CONFIG_PATH="$INSTALL_DIR/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" pkg-config --cflags --libs "$package")
+}
+
 expected_symbols() {
     local section=$1
     awk -v wanted="$section" '
@@ -54,7 +63,7 @@ expected_symbols() {
 }
 
 actual_symbols() {
-    nm -D --defined-only "$1" | awk '{print $3}' | sort
+    nm -D --defined-only "$1" | awk 'NF >= 3 { sub(/@.*/, "", $3); print $3 }' | sort -u
 }
 
 if [[ -n "$TEMP_BUILD_DIR" ]]; then
@@ -108,19 +117,115 @@ diff -u <(expected_symbols utils) <(actual_symbols "$UTILS_LIB") \
     || fail "utils export set does not match debian/libcjson1.symbols"
 
 expect_contains "includedir=${EXPECTED_INSTALL_PREFIX}/include" "$CORE_PC"
-expect_contains 'Cflags: -I${includedir} -I${includedir}/cjson' "$CORE_PC"
+expect_contains 'includedir_cjson=${includedir}/cjson' "$CORE_PC"
+expect_contains 'Cflags: -I${includedir} -I${includedir_cjson}' "$CORE_PC"
 expect_contains 'Libs: -L${libdir} -lcjson' "$CORE_PC"
 expect_contains "includedir=${EXPECTED_INSTALL_PREFIX}/include" "$UTILS_PC"
-expect_contains 'Cflags: -I${includedir} -I${includedir}/cjson' "$UTILS_PC"
+expect_contains 'includedir_cjson=${includedir}/cjson' "$UTILS_PC"
+expect_contains 'Cflags: -I${includedir} -I${includedir_cjson}' "$UTILS_PC"
 expect_contains "Requires: libcjson" "$UTILS_PC"
+
+cat >"$CONSUMER_DIR/pkg_core_root.c" <<'EOF'
+#include <cJSON.h>
+
+int main(void) {
+    return cJSON_Version() == 0;
+}
+EOF
+cat >"$CONSUMER_DIR/pkg_core_nested.c" <<'EOF'
+#include <cjson/cJSON.h>
+
+int main(void) {
+    return cJSON_Version() == 0;
+}
+EOF
+cat >"$CONSUMER_DIR/pkg_utils_root.c" <<'EOF'
+#include <cJSON_Utils.h>
+
+int main(void) {
+    cJSONUtils_SortObject(0);
+    return 0;
+}
+EOF
+cat >"$CONSUMER_DIR/pkg_utils_nested.c" <<'EOF'
+#include <cjson/cJSON_Utils.h>
+
+int main(void) {
+    cJSONUtils_SortObject(0);
+    return 0;
+}
+EOF
+
+compile_with_pkg_config libcjson "$CONSUMER_DIR/pkg_core_root.c" "$CONSUMER_DIR/pkg_core_root"
+compile_with_pkg_config libcjson "$CONSUMER_DIR/pkg_core_nested.c" "$CONSUMER_DIR/pkg_core_nested"
+compile_with_pkg_config libcjson_utils "$CONSUMER_DIR/pkg_utils_root.c" "$CONSUMER_DIR/pkg_utils_root"
+compile_with_pkg_config libcjson_utils "$CONSUMER_DIR/pkg_utils_nested.c" "$CONSUMER_DIR/pkg_utils_nested"
+
+cat >"$CONSUMER_DIR/cmake_core_root.c" <<'EOF'
+#include <cJSON.h>
+
+int main(void) {
+    return cJSON_Version() == 0;
+}
+EOF
+cat >"$CONSUMER_DIR/cmake_core_nested.c" <<'EOF'
+#include <cjson/cJSON.h>
+
+int main(void) {
+    return cJSON_Version() == 0;
+}
+EOF
+cat >"$CONSUMER_DIR/cmake_utils_root.c" <<'EOF'
+#include <cJSON_Utils.h>
+
+int main(void) {
+    cJSONUtils_SortObject(0);
+    return 0;
+}
+EOF
+cat >"$CONSUMER_DIR/cmake_utils_nested.c" <<'EOF'
+#include <cjson/cJSON_Utils.h>
+
+int main(void) {
+    cJSONUtils_SortObject(0);
+    return 0;
+}
+EOF
 
 cat >"$CONSUMER_DIR/CMakeLists.txt" <<EOF
 cmake_minimum_required(VERSION 3.16)
 project(cjson_abi_check LANGUAGES C)
 list(APPEND CMAKE_PREFIX_PATH "${INSTALL_DIR}")
 find_package(cJSON CONFIG REQUIRED)
+get_target_property(core_includes cjson INTERFACE_INCLUDE_DIRECTORIES)
+list(FIND core_includes "${INSTALL_DIR}/include" core_include_idx)
+if(core_include_idx EQUAL -1)
+    message(FATAL_ERROR "cjson should expose ${INSTALL_DIR}/include, got: \${core_includes}")
+endif()
+list(FIND core_includes "${INSTALL_DIR}/include/cjson" core_compat_include_idx)
+if(core_compat_include_idx EQUAL -1)
+    message(FATAL_ERROR "cjson should expose ${INSTALL_DIR}/include/cjson, got: \${core_includes}")
+endif()
+get_target_property(utils_includes cjson_utils INTERFACE_INCLUDE_DIRECTORIES)
+list(FIND utils_includes "${INSTALL_DIR}/include" utils_include_idx)
+if(utils_include_idx EQUAL -1)
+    message(FATAL_ERROR "cjson_utils should expose ${INSTALL_DIR}/include, got: \${utils_includes}")
+endif()
+list(FIND utils_includes "${INSTALL_DIR}/include/cjson" utils_compat_include_idx)
+if(utils_compat_include_idx EQUAL -1)
+    message(FATAL_ERROR "cjson_utils should expose ${INSTALL_DIR}/include/cjson, got: \${utils_includes}")
+endif()
+add_executable(cmake_core_root cmake_core_root.c)
+target_link_libraries(cmake_core_root PRIVATE cjson)
+add_executable(cmake_core_nested cmake_core_nested.c)
+target_link_libraries(cmake_core_nested PRIVATE cjson)
+add_executable(cmake_utils_root cmake_utils_root.c)
+target_link_libraries(cmake_utils_root PRIVATE cjson_utils)
+add_executable(cmake_utils_nested cmake_utils_nested.c)
+target_link_libraries(cmake_utils_nested PRIVATE cjson_utils)
 EOF
 
 cmake -S "$CONSUMER_DIR" -B "$CONSUMER_DIR/build" >/dev/null
+cmake --build "$CONSUMER_DIR/build" >/dev/null
 
 printf 'check-abi: ok\n'

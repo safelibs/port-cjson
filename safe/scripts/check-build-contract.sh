@@ -74,6 +74,19 @@ run_case override-static no yes \
 run_case shared-and-static yes yes \
     -DBUILD_SHARED_AND_STATIC_LIBS=ON
 
+HIDDEN_BUILD="$WORK_DIR/hidden-build"
+cmake -S "$ROOT_DIR" -B "$HIDDEN_BUILD" \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_CJSON_TEST=OFF \
+    -DENABLE_HIDDEN_SYMBOLS=ON >/dev/null
+cmake --build "$HIDDEN_BUILD" >/dev/null
+if nm -D --defined-only "$HIDDEN_BUILD/cargo-target/debug/libcjson.so" | awk '{print $3}' | grep -q '^cJSON_'; then
+    fail "ENABLE_HIDDEN_SYMBOLS should hide cJSON shared-library exports"
+fi
+if nm -D --defined-only "$HIDDEN_BUILD/cargo-target/debug/libcjson_utils.so" | awk '{print $3}' | grep -q '^cJSONUtils_'; then
+    fail "ENABLE_HIDDEN_SYMBOLS should hide cJSON utils shared-library exports"
+fi
+
 SHARED_STATIC_INSTALL="$WORK_DIR/shared-and-static-install"
 SHARED_STATIC_CONSUMER="$WORK_DIR/shared-and-static-consumer"
 mkdir -p "$SHARED_STATIC_CONSUMER"
@@ -106,21 +119,70 @@ cmake --build "$MULTIARCH_BUILD" >/dev/null
 cmake --install "$MULTIARCH_BUILD" >/dev/null
 
 mkdir -p "$MULTIARCH_CONSUMER"
+cat >"$MULTIARCH_CONSUMER/core_root.c" <<'EOF'
+#include <cJSON.h>
+
+int main(void) {
+    return cJSON_Version() == 0;
+}
+EOF
+cat >"$MULTIARCH_CONSUMER/core_nested.c" <<'EOF'
+#include <cjson/cJSON.h>
+
+int main(void) {
+    return cJSON_Version() == 0;
+}
+EOF
+cat >"$MULTIARCH_CONSUMER/utils_root.c" <<'EOF'
+#include <cJSON_Utils.h>
+
+int main(void) {
+    cJSONUtils_SortObject(0);
+    return 0;
+}
+EOF
+cat >"$MULTIARCH_CONSUMER/utils_nested.c" <<'EOF'
+#include <cjson/cJSON_Utils.h>
+
+int main(void) {
+    cJSONUtils_SortObject(0);
+    return 0;
+}
+EOF
 cat >"$MULTIARCH_CONSUMER/CMakeLists.txt" <<EOF
 cmake_minimum_required(VERSION 3.16)
 project(cjson_multiarch_contract LANGUAGES C)
 list(APPEND CMAKE_PREFIX_PATH "${MULTIARCH_INSTALL}")
 find_package(cJSON CONFIG REQUIRED)
 get_target_property(core_includes cjson INTERFACE_INCLUDE_DIRECTORIES)
-if(NOT core_includes STREQUAL "${MULTIARCH_INSTALL}/include")
+list(FIND core_includes "${MULTIARCH_INSTALL}/include" core_include_idx)
+if(core_include_idx EQUAL -1)
     message(FATAL_ERROR "cjson should expose ${MULTIARCH_INSTALL}/include, got: \${core_includes}")
 endif()
+list(FIND core_includes "${MULTIARCH_INSTALL}/include/cjson" core_compat_include_idx)
+if(core_compat_include_idx EQUAL -1)
+    message(FATAL_ERROR "cjson should expose ${MULTIARCH_INSTALL}/include/cjson, got: \${core_includes}")
+endif()
 get_target_property(utils_includes cjson_utils INTERFACE_INCLUDE_DIRECTORIES)
-if(NOT utils_includes STREQUAL "${MULTIARCH_INSTALL}/include")
+list(FIND utils_includes "${MULTIARCH_INSTALL}/include" utils_include_idx)
+if(utils_include_idx EQUAL -1)
     message(FATAL_ERROR "cjson_utils should expose ${MULTIARCH_INSTALL}/include, got: \${utils_includes}")
 endif()
+list(FIND utils_includes "${MULTIARCH_INSTALL}/include/cjson" utils_compat_include_idx)
+if(utils_compat_include_idx EQUAL -1)
+    message(FATAL_ERROR "cjson_utils should expose ${MULTIARCH_INSTALL}/include/cjson, got: \${utils_includes}")
+endif()
+add_executable(core_root core_root.c)
+target_link_libraries(core_root PRIVATE cjson)
+add_executable(core_nested core_nested.c)
+target_link_libraries(core_nested PRIVATE cjson)
+add_executable(utils_root utils_root.c)
+target_link_libraries(utils_root PRIVATE cjson_utils)
+add_executable(utils_nested utils_nested.c)
+target_link_libraries(utils_nested PRIVATE cjson_utils)
 EOF
 cmake -S "$MULTIARCH_CONSUMER" -B "$MULTIARCH_CONSUMER/build" >/dev/null
+cmake --build "$MULTIARCH_CONSUMER/build" >/dev/null
 
 UNINSTALL_BUILD="$WORK_DIR/uninstall-build"
 UNINSTALL_INSTALL="$WORK_DIR/uninstall-install"

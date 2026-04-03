@@ -1,4 +1,4 @@
-LIBCJSON_UTILS_1.7.17 {
+{
   global:
     cJSONUtils_AddPatchToArray;
     cJSONUtils_ApplyPatches;
