@@ -1,0 +1,188 @@
+{
+  "ubuntu_release": "24.04",
+  "codename": "noble",
+  "cjson_packages": [
+    "libcjson1",
+    "libcjson-dev"
+  ],
+  "methodology": "Generated on Ubuntu 24.04.3 LTS using local apt-cache metadata plus spot inspection of the corresponding upstream source trees shipped in the Ubuntu archive.",
+  "dependents": [
+    {
+      "source_package": "freerdp3",
+      "packages": [
+        "freerdp3-dev"
+      ],
+      "domain": "remote desktop",
+      "dependency_kind": [
+        "build-time"
+      ],
+      "runtime_functionality": null,
+      "notes": "Ubuntu 24.04 source metadata and freerdp3-dev depend on libcjson-dev, but the published runtime packages such as libfreerdp3-3 and freerdp3-x11 do not directly depend on libcjson1.",
+      "evidence_paths": [
+        "libfreerdp/core/aad.c",
+        "libfreerdp/core/gateway/arm.c",
+        "client/SDL/sdl_utils.cpp"
+      ]
+    },
+    {
+      "source_package": "librist",
+      "packages": [
+        "librist4",
+        "rist-tools"
+      ],
+      "domain": "media streaming",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "The library emits sender and receiver transport statistics as JSON objects delivered through the stats callback interface.",
+        "The CLI tools inherit that runtime use transitively through librist4."
+      ],
+      "evidence_paths": [
+        "src/stats.c"
+      ]
+    },
+    {
+      "source_package": "monado",
+      "packages": [
+        "monado-service",
+        "monado-gui",
+        "monado-cli"
+      ],
+      "domain": "XR/VR runtime",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Parses headset and controller JSON configuration blobs, including Vive and Index device data.",
+        "Reads and writes stereo camera calibration JSON files.",
+        "Persists GUI calibration scene state as JSON."
+      ],
+      "evidence_paths": [
+        "src/xrt/auxiliary/vive/vive_config.c",
+        "src/xrt/auxiliary/tracking/t_file.cpp",
+        "src/xrt/auxiliary/tracking/t_data_utils.c",
+        "src/xrt/auxiliary/util/u_config_json.c",
+        "src/xrt/state_trackers/gui/gui_scene_calibrate.c"
+      ]
+    },
+    {
+      "source_package": "mosquitto",
+      "packages": [
+        "mosquitto",
+        "mosquitto-clients"
+      ],
+      "domain": "networking",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "The broker's dynamic-security plugin loads and saves its security configuration as JSON.",
+        "mosquitto_sub and related client-side JSON output modes render message data and MQTT properties with cJSON."
+      ],
+      "evidence_paths": [
+        "README-compiling.md",
+        "plugins/dynamic-security/plugin.c",
+        "client/sub_client_output.c"
+      ]
+    },
+    {
+      "source_package": "ocp",
+      "packages": [
+        "opencubicplayer"
+      ],
+      "domain": "audio player",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Parses MusicBrainz JSON responses and cached JSON metadata for CD and release lookups."
+      ],
+      "evidence_paths": [
+        "filesel/musicbrainz.c"
+      ]
+    },
+    {
+      "source_package": "oidc-agent",
+      "packages": [
+        "oidc-agent-cli",
+        "liboidc-agent4t64"
+      ],
+      "domain": "authentication",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Serializes account definitions and loaded-account status information as JSON.",
+        "Parses OpenID Connect device-flow JSON responses.",
+        "Updates encrypted account configuration files by editing their JSON refresh-token field."
+      ],
+      "evidence_paths": [
+        "src/account/account.c",
+        "src/oidc-agent/oidc/device_code.c",
+        "src/oidc-agent/oidcd/oidcd_handler.c",
+        "src/oidc-agent/oidcp/config_updater.c"
+      ]
+    },
+    {
+      "source_package": "pgagroal",
+      "packages": [
+        "pgagroal"
+      ],
+      "domain": "database",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Builds JSON command objects for management and CLI operations such as status, ping, conf get/set, and conf ls.",
+        "Parses JSON command output when printing management responses."
+      ],
+      "evidence_paths": [
+        "src/libpgagroal/json.c",
+        "src/libpgagroal/management.c"
+      ]
+    },
+    {
+      "source_package": "qad",
+      "packages": [
+        "qad"
+      ],
+      "domain": "hardware testing",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Parses JSON request bodies for REST endpoints that inject move, button, touch, and swipe input events."
+      ],
+      "evidence_paths": [
+        "src/server.c"
+      ]
+    },
+    {
+      "source_package": "snibbetracker",
+      "packages": [
+        "snibbetracker"
+      ],
+      "domain": "music creation",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Saves tracker projects as JSON-based .snibb files and loads them back at runtime.",
+        "Parses JSON application configuration for buffer, fullscreen, preview, and color settings."
+      ],
+      "evidence_paths": [
+        "snibbetracker/src/CSynth.c",
+        "snibbetracker/src/main.c"
+      ]
+    }
+  ]
+}
