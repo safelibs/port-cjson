@@ -58,6 +58,7 @@ if(ENABLE_CJSON_TEST)
         cjson_add
         readme_examples
         minify_tests
+        public_api_coverage
     )
 
     option(ENABLE_VALGRIND OFF "Enable the valgrind memory checker for the tests.")
