@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOUNCE_TARGET=impl_04_utils
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+BUILD_DIR=$(mktemp -d)
+
+cleanup() {
+    rm -rf "$BUILD_DIR"
+}
+trap cleanup EXIT
+
+cd "$REPO_ROOT"
+
+cargo check --manifest-path safe/Cargo.toml -p safe-libcjson-utils
+"$REPO_ROOT/safe/scripts/check-build-contract.sh"
+"$REPO_ROOT/safe/scripts/check-abi.sh"
+
+cmake -S "$REPO_ROOT/safe" -B "$BUILD_DIR" \
+    -DENABLE_CJSON_TEST=ON \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_LOCALES=ON
+cmake --build "$BUILD_DIR"
+ctest --test-dir "$BUILD_DIR" --output-on-failure

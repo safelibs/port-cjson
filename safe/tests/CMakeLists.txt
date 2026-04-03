@@ -66,6 +66,20 @@ function(add_safe_unity_test test_name source_file)
     endif()
 endfunction()
 
+function(add_safe_utils_test test_name source_file)
+    add_safe_test("${test_name}" "${source_file}")
+    target_link_libraries("${test_name}" PRIVATE "${CJSON_UTILS_SHARED_OUTPUT}")
+    add_dependencies("${test_name}" cjson-utils-artifacts)
+endfunction()
+
+function(add_safe_unity_utils_test test_name source_file)
+    add_safe_utils_test("${test_name}" "${source_file}")
+    target_link_libraries("${test_name}" PRIVATE unity)
+    if("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+        target_sources("${test_name}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/unity_setup.c")
+    endif()
+endfunction()
+
 set(upstream_non_utils_tests
     parse_examples
     parse_number
@@ -94,6 +108,16 @@ set(regression_tests
     number_cve_2023_26819
 )
 
+set(utils_unity_tests
+    json_patch_tests
+    old_utils_tests
+    misc_utils_tests
+)
+
+set(utils_regression_tests
+    json_pointer_cve_2025_57052
+)
+
 foreach(unity_test ${upstream_non_utils_tests})
     add_safe_unity_test("${unity_test}" "${CMAKE_CURRENT_SOURCE_DIR}/${unity_test}.c")
 endforeach()
@@ -101,6 +125,17 @@ endforeach()
 add_safe_unity_test(core_layout_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_layout_smoke.c")
 add_safe_unity_test(core_hooks_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_hooks_smoke.c")
 add_safe_unity_test(number_cve_2023_26819 "${CMAKE_CURRENT_SOURCE_DIR}/regressions/number_cve_2023_26819.c")
+
+if(ENABLE_CJSON_UTILS)
+    foreach(unity_test ${utils_unity_tests})
+        add_safe_unity_utils_test("${unity_test}" "${CMAKE_CURRENT_SOURCE_DIR}/${unity_test}.c")
+    endforeach()
+
+    add_safe_unity_utils_test(
+        json_pointer_cve_2025_57052
+        "${CMAKE_CURRENT_SOURCE_DIR}/regressions/json_pointer_cve_2025_57052.c"
+    )
+endif()
 
 add_safe_test(cJSON_test "${CMAKE_CURRENT_SOURCE_DIR}/../test.c")
 if(FLAG_SUPPORTED_fsanitizefloatdividebyzero)
@@ -112,6 +147,13 @@ set(all_safe_tests
     ${regression_tests}
     cJSON_test
 )
+
+if(ENABLE_CJSON_UTILS)
+    list(APPEND all_safe_tests
+        ${utils_unity_tests}
+        ${utils_regression_tests}
+    )
+endif()
 
 add_custom_target(check
     COMMAND "${CMAKE_CTEST_COMMAND}" --output-on-failure)
