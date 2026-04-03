@@ -12,8 +12,11 @@ set(CJSON_INCLUDE_DIR_CJSON "${_IMPORT_PREFIX}/include/cjson")
 # The cJSON library
 set(CJSON_LIBRARY "@CJSON_LIB@")
 if(@ENABLE_TARGET_EXPORT@)
-  # Include the target
-  include("${_dir}/cjson.cmake")
+  if(EXISTS "${_dir}/cJSONTargets.cmake")
+    include("${_dir}/cJSONTargets.cmake")
+  else()
+    include("${_dir}/cjson.cmake")
+  endif()
 endif()
 
 if(CJSON_UTILS_FOUND)
@@ -22,8 +25,11 @@ if(CJSON_UTILS_FOUND)
   # All cJSON libraries
   set(CJSON_LIBRARIES "@CJSON_UTILS_LIB@" "@CJSON_LIB@")
   if(@ENABLE_TARGET_EXPORT@)
-    # Include the target
-    include("${_dir}/cjson_utils.cmake")
+    if(EXISTS "${_dir}/cJSONTargets-utils.cmake")
+      include("${_dir}/cJSONTargets-utils.cmake")
+    else()
+      include("${_dir}/cjson_utils.cmake")
+    endif()
   endif()
 else()
   # All cJSON libraries

@@ -411,6 +411,7 @@ if(CJSON_INSTALL_STATIC)
 endif()
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cjson.cmake" "${CJSON_CORE_TARGET_EXPORT_CONTENT}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cJSONTargets.cmake" "${CJSON_CORE_TARGET_EXPORT_CONTENT}")
 
 if(ENABLE_CJSON_UTILS)
     set(CJSON_UTILS_TARGET_EXPORT_CONTENT
@@ -467,6 +468,7 @@ if(ENABLE_CJSON_UTILS)
             "endif()\n")
     endif()
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cjson_utils.cmake" "${CJSON_UTILS_TARGET_EXPORT_CONTENT}")
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cJSONTargets-utils.cmake" "${CJSON_UTILS_TARGET_EXPORT_CONTENT}")
 endif()
 
 configure_file(
@@ -545,10 +547,12 @@ if(ENABLE_TARGET_EXPORT)
         "${CMAKE_CURRENT_BINARY_DIR}/cJSONConfig.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/cJSONConfigVersion.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/cjson.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/cJSONTargets.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cJSON")
     if(ENABLE_CJSON_UTILS)
         install(FILES
             "${CMAKE_CURRENT_BINARY_DIR}/cjson_utils.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/cJSONTargets-utils.cmake"
             DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cJSON")
     endif()
 endif()

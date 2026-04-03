@@ -33,7 +33,7 @@ pub(crate) unsafe fn sort_object(object: *mut cJSON, case_sensitive: bool) {
     }
 
     entries.sort_by(|left, right| {
-        let diff = unsafe { compare_strings((**left).string, (**right).string, case_sensitive) };
+        let diff = compare_strings((**left).string, (**right).string, case_sensitive);
         if diff < 0 {
             Ordering::Less
         } else if diff > 0 {
