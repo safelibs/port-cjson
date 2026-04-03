@@ -1,0 +1,96 @@
+cjson (1.7.17-1) unstable; urgency=medium
+
+  * New upstream release.
+    (Closes: #1059287) (CVE-2023-50471) (CVE-2023-50472)
+
+ -- Boyuan Yang <byang@debian.org>  Thu, 28 Dec 2023 15:17:13 -0500
+
+cjson (1.7.16-2) unstable; urgency=medium
+
+  * debian/rules: Enable building and installation of CJSON_UTILS
+    library and header files. (Closes: #1055052)
+  * debian/libcjson1.symbols: Updated accordingly.
+
+ -- Boyuan Yang <byang@debian.org>  Wed, 01 Nov 2023 15:33:23 -0400
+
+cjson (1.7.16-1) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+  [ Boyuan Yang ]
+  * New upstream release.
+  * debian/control: Bump Standards-Version to 4.6.2.
+
+ -- Boyuan Yang <byang@debian.org>  Tue, 11 Jul 2023 11:53:59 -0400
+
+cjson (1.7.15-1) unstable; urgency=medium
+
+  * New upstream release 1.7.15.
+  * Bump Standards-Version to 4.6.0 (no changes needed).
+
+ -- Boyuan Yang <byang@debian.org>  Sun, 29 Aug 2021 16:30:06 -0400
+
+cjson (1.7.14-1) unstable; urgency=medium
+
+  * New upstream release 1.7.14.
+  * debian/symbols: Refresh symbols.
+
+ -- Boyuan Yang <byang@debian.org>  Sun, 06 Sep 2020 10:48:14 -0400
+
+cjson (1.7.13-1) unstable; urgency=medium
+
+  * New upstream release 1.7.13.
+  * debian/symbols: Refresh symbols.
+
+ -- Boyuan Yang <byang@debian.org>  Sat, 23 May 2020 19:27:39 -0400
+
+cjson (1.7.10-2) unstable; urgency=medium
+
+  * Take over package maintenance. (Closes: #958656)
+  * debian/control:
+    + Bump Standards-Version to 4.5.0.
+    + Bump debhelper compat to v13.
+    + Update URL in Vcs-* packaging repository.
+  * debian/libcjson-dev.install: Also install cmake/pkgconfig files.
+
+ -- Boyuan Yang <byang@debian.org>  Sat, 23 May 2020 07:16:39 +0800
+
+cjson (1.7.10-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Cherry pick upstream commit a43fa56a63920343d0ac8f8e73a6b0447867f459,
+    which contains fixes for CVEs (Closes: #928726)
+    + CVE-2019-11834
+    + CVE-2019-11835
+
+ -- Gordon Ball <gordon@chronitis.net>  Tue, 14 May 2019 08:52:20 +0000
+
+cjson (1.7.10-1) unstable; urgency=medium
+
+  * New upstream version 1.7.10
+
+ -- Yanhao Mo <yanhaocs@gmail.com>  Mon, 07 Jan 2019 16:17:56 +0800
+
+cjson (1.7.8-1) unstable; urgency=medium
+
+  * New upstream version 1.7.8
+  * Bump Standards-Version to 4.2.0 (no changes needed).
+  * Apply wrap-and-sort changes.
+
+ -- Yanhao Mo <yanhaocs@gmail.com>  Sun, 14 Oct 2018 11:11:09 +0800
+
+cjson (1.7.7-1) unstable; urgency=medium
+
+  * New upstream version 1.7.7
+    + Fix a memory leak when realloc fails.
+  * Bump Standards-Version to 4.2.0 (no changes needed).
+
+ -- Yanhao Mo <yanhaocs@gmail.com>  Thu, 23 Aug 2018 16:42:05 +0800
+
+cjson (1.7.5-1) unstable; urgency=medium
+
+  * Initial release. Closes: #870443
+
+ -- Yanhao Mo <yanhaocs@gmail.com>  Thu, 29 Mar 2018 22:53:48 +0800
