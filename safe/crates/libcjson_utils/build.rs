@@ -1,7 +1,6 @@
 use std::env;
 
-fn main()
-{
+fn main() {
     println!("cargo:rerun-if-env-changed=CJSON_CORE_LIBRARY_DIR");
     println!("cargo:rerun-if-env-changed=CJSON_UTILS_SONAME");
 
