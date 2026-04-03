@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-04-03T04:31:43Z",
+  "source_file": "all_cves.json",
+  "selection_rule": "Included CVEs whose root cause can survive a Rust port after removing C-specific pointer and allocator failures. CVE-2025-57052 is included because its transferable bug class is improper array-index validation even though the C manifestation is an out-of-bounds read.",
+  "relevant_cve_ids": [
+    "CVE-2025-57052",
+    "CVE-2023-26819"
+  ],
+  "relevant_cves": [
+    {
+      "id": "CVE-2025-57052",
+      "current_package_status": "affected",
+      "summary": "cJSON 1.5.0 through 1.7.18 allows out-of-bounds access via the decode_array_index_from_pointer function in cJSON_Utils.c, allowing remote attackers to bypass array bounds checking and access restricted data via malformed JSON pointer strings containing alphanumeric characters.",
+      "transferable_root_cause": "JSON Pointer array-index validation bug, not just C out-of-bounds behavior.",
+      "why_it_matters_for_rust": "A Rust port can still reproduce the semantic bug if it copies the same token parser. Safe Rust removes the out-of-bounds read, but malformed array indices may still be accepted and resolved to the wrong element, which can break authorization or data-isolation logic built on pointer lookups.",
+      "evidence": {
+        "cwe": [
+          "CWE-129 Improper Validation of Array Index",
+          "CWE-125 Out-of-bounds Read"
+        ],
+        "local_code_references": [
+          "original/cJSON_Utils.c:274",
+          "original/cJSON_Utils.c:285",
+          "original/cJSON_Utils.c:291"
+        ],
+        "analysis_note": "The digit loop tests pointer[0] <= '9' instead of pointer[position] <= '9', so an alphanumeric suffix after a leading digit is not validated correctly."
+      },
+      "porting_actions": [
+        "Require each array-index token to consist only of ASCII digits.",
+        "Reject leading zeroes except for the literal 0.",
+        "Reject tokens that are not fully consumed or that overflow the target index type."
+      ]
+    },
+    {
+      "id": "CVE-2023-26819",
+      "current_package_status": "affected",
+      "summary": "cJSON 1.7.15 might allow a denial of service via a crafted JSON document such as {\"a\": true, \"b\": [ null,9999999999999999999999999999999999999999999999912345678901234567]}.",
+      "transferable_root_cause": "Number parser expected-behavior failure caused by a fixed-size scratch buffer and partial token consumption.",
+      "why_it_matters_for_rust": "A Rust port that keeps cJSON-compatible numeric parsing quirks can still mishandle gigantic numeric literals, accept only a prefix, or lose parser progress guarantees. That is a logic and denial-of-service risk even without unsafe memory access.",
+      "evidence": {
+        "cwe": [
+          "CWE-440 Expected Behavior Violation"
+        ],
+        "local_code_references": [
+          "original/cJSON.c:305",
+          "original/cJSON.c:309",
+          "original/cJSON.c:321",
+          "original/cJSON.c:353",
+          "original/cJSON.c:377",
+          "original/README.md:562"
+        ],
+        "analysis_note": "parse_number copies at most 63 characters into a 64-byte temporary buffer, parses that prefix with strtod, and then advances only by the consumed prefix length. The README explicitly documents the 63-character literal limit."
+      },
+      "porting_actions": [
+        "Either remove the legacy 63-character limit or reject overlong numeric literals explicitly.",
+        "Require the numeric lexer or parser to consume the full token before accepting it.",
+        "Add tests for huge integers and exponents to ensure the parser always makes forward progress and fails closed."
+      ]
+    }
+  ],
+  "reviewed_but_excluded": [
+    {
+      "id": "CVE-2019-1010239",
+      "current_package_status": "not_affected",
+      "reason_excluded": "The reported issue is a NULL-dereference crash from exceptional-condition handling. That specific failure mode depends on pointer misuse rather than transferable parsing semantics, so a safe Rust implementation should avoid it unless unsafe code or panic-based assumptions reintroduce it."
+    },
+    {
+      "id": "CVE-2018-1000215",
+      "current_package_status": "not_affected",
+      "reason_excluded": "This is a leak on allocation-failure during printing. It is not memory corruption, but it is tightly coupled to manual ownership cleanup in C and is unlikely to survive a conventional safe Rust implementation with RAII."
+    }
+  ]
+}
