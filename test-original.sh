@@ -47,6 +47,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
+      autoconf \
+      automake \
       build-essential \
       ca-certificates \
       cargo \
@@ -55,6 +57,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
       dpkg-dev \
       file \
       jq \
+      libtool \
       meson \
       netcat-openbsd \
       ninja-build \
@@ -113,6 +116,9 @@ expected = [
     "pgagroal",
     "qad",
     "snibbetracker",
+    "opm-common",
+    "iperf3",
+    "epic5",
 ]
 
 data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -1426,6 +1432,196 @@ EOF
     /tmp/snibbetracker-smoke.json >/dev/null
 }
 
+test_opm_common() {
+  local src=""
+  local smoke_dir="/tmp/opm-common-json-smoke"
+  local binary=""
+
+  should_run opm-common || return 0
+
+  src="$(fetch_source opm-common)"
+
+  log "opm-common: building a JsonObject smoke with upstream Findcjson.cmake and exercising parse/dump paths"
+  run_bash_logged /tmp/opm-common-build.log "
+    set -euo pipefail
+    rm -rf '$smoke_dir'
+    OPM_COMMON_SRC='$src' python3 - <<'PY'
+import base64
+import os
+from pathlib import Path
+
+src = Path(os.environ['OPM_COMMON_SRC'])
+smoke_dir = Path('/tmp/opm-common-json-smoke')
+cmake_b64 = 'Y21ha2VfbWluaW11bV9yZXF1aXJlZChWRVJTSU9OIDMuMTYpCnByb2plY3Qob3BtX2NvbW1vbl9qc29uX3Ntb2tlIExBTkdVQUdFUyBDIENYWCkKCmxpc3QoUFJFUEVORCBDTUFLRV9NT0RVTEVfUEFUSCAiQEBTUkNAQC9jbWFrZS9Nb2R1bGVzIikKZmluZF9wYWNrYWdlKGNqc29uIFJFUVVJUkVEKQoKYWRkX2V4ZWN1dGFibGUob3BtLWNvbW1vbi1qc29uLXNtb2tlCiAgbWFpbi5jcHAKICAiQEBTUkNAQC9zcmMvb3BtL2pzb24vSnNvbk9iamVjdC5jcHAiKQp0YXJnZXRfaW5jbHVkZV9kaXJlY3RvcmllcyhvcG0tY29tbW9uLWpzb24tc21va2UgUFJJVkFURQogICJAQFNSQ0BAIgogICR7Y2pzb25fSU5DTFVERV9ESVJTfSkKdGFyZ2V0X2xpbmtfbGlicmFyaWVzKG9wbS1jb21tb24tanNvbi1zbW9rZSBQUklWQVRFICR7Y2pzb25fTElCUkFSSUVTfSkKdGFyZ2V0X2NvbXBpbGVfZmVhdHVyZXMob3BtLWNvbW1vbi1qc29uLXNtb2tlIFBSSVZBVEUgY3h4X3N0ZF8xNykK'
+main_b64 = 'I2luY2x1ZGUgPGZpbGVzeXN0ZW0+CiNpbmNsdWRlIDxpb3N0cmVhbT4KI2luY2x1ZGUgPHN0cmluZz4KCiNpbmNsdWRlIDxvcG0vanNvbi9Kc29uT2JqZWN0LmhwcD4KCmludCBtYWluKGludCBhcmdjLCBjaGFyICoqYXJndikgewogIGlmIChhcmdjICE9IDIpIHsKICAgIHN0ZDo6Y2VyciA8PCAiZXhwZWN0ZWQgYSBKU09OIGZpbGUgcGF0aFxuIjsKICAgIHJldHVybiAxOwogIH0KCiAgSnNvbjo6SnNvbk9iamVjdCBwYXJzZWQoc3RkOjpmaWxlc3lzdGVtOjpwYXRoKGFyZ3ZbMV0pKTsKICBpZiAoIXBhcnNlZC5oYXNfaXRlbSgia2V5d29yZHMiKSkgewogICAgc3RkOjpjZXJyIDw8ICJrZXl3b3JkcyBhcnJheSBtaXNzaW5nXG4iOwogICAgcmV0dXJuIDI7CiAgfQoKICBKc29uOjpKc29uT2JqZWN0IGtleXdvcmRzID0gcGFyc2VkLmdldF9pdGVtKCJrZXl3b3JkcyIpOwogIGlmICgha2V5d29yZHMuaXNfYXJyYXkoKSB8fCBrZXl3b3Jkcy5zaXplKCkgIT0gMlUpIHsKICAgIHN0ZDo6Y2VyciA8PCAidW5leHBlY3RlZCBrZXl3b3JkIGFycmF5IHNoYXBlXG4iOwogICAgcmV0dXJuIDM7CiAgfQoKICBKc29uOjpKc29uT2JqZWN0IGZpcnN0ID0ga2V5d29yZHMuZ2V0X2FycmF5X2l0ZW0oMFUpOwogIGlmIChmaXJzdC5nZXRfc3RyaW5nKCJuYW1lIikgIT0gIkJQUiIpIHsKICAgIHN0ZDo6Y2VyciA8PCAiZmlyc3Qga2V5d29yZCBuYW1lIGRpZCBub3Qgcm91bmQtdHJpcFxuIjsKICAgIHJldHVybiA0OwogIH0KCiAgSnNvbjo6SnNvbk9iamVjdCBnZW5lcmF0ZWQ7CiAgZ2VuZXJhdGVkLmFkZF9pdGVtKCJwcm9iZSIsICJvayIpOwogIEpzb246Okpzb25PYmplY3QgdmFsdWVzID0gZ2VuZXJhdGVkLmFkZF9hcnJheSgidmFsdWVzIik7CiAgdmFsdWVzLmFkZCg3KTsKICB2YWx1ZXMuYWRkKDkpOwoKICBKc29uOjpKc29uT2JqZWN0IHJvdW5kdHJpcChnZW5lcmF0ZWQuZHVtcCgpKTsKICBpZiAocm91bmR0cmlwLmdldF9zdHJpbmcoInByb2JlIikgIT0gIm9rIiB8fAogICAgICByb3VuZHRyaXAuZ2V0X2l0ZW0oInZhbHVlcyIpLmdldF9hcnJheV9pdGVtKDFVKS5hc19pbnQoKSAhPSA5KSB7CiAgICBzdGQ6OmNlcnIgPDwgImdlbmVyYXRlZCBKU09OIGRpZCBub3Qgcm91bmQtdHJpcFxuIjsKICAgIHJldHVybiA1OwogIH0KCiAgc3RkOjpjb3V0IDw8ICJvcG0tY29tbW9uLWpzb24tb2tcbiI7CiAgcmV0dXJuIDA7Cn0K'
+
+smoke_dir.mkdir(parents=True, exist_ok=True)
+(smoke_dir / 'CMakeLists.txt').write_text(
+    base64.b64decode(cmake_b64).decode('utf-8').replace('@@SRC@@', str(src)),
+    encoding='utf-8',
+)
+(smoke_dir / 'main.cpp').write_text(
+    base64.b64decode(main_b64).decode('utf-8').replace(
+        'Json::JsonObject parsed(std::filesystem::path(argv[1]));',
+        'Json::JsonObject parsed{std::filesystem::path(argv[1])};',
+    ),
+    encoding='utf-8',
+)
+PY
+    cmake -S '$smoke_dir' -B '$smoke_dir/build' -G Ninja
+    cmake --build '$smoke_dir/build'
+  "
+
+  binary="$(find "$smoke_dir" -maxdepth 5 -type f -name 'opm-common-json-smoke' | head -n1)"
+  if ! test -x "$binary"; then
+    cat /tmp/opm-common-build.log >&2
+    die "opm-common JsonObject smoke binary was not built"
+  fi
+  assert_links_to_packaged_safe "$binary"
+  run_logged /tmp/opm-common-json.log "$binary" "$src/tests/json/example1.json"
+  grep -Fx 'opm-common-json-ok' /tmp/opm-common-json.log >/dev/null
+}
+
+test_iperf3() {
+  local src=""
+  local binary=""
+  local lib_path=""
+
+  should_run iperf3 || return 0
+
+  install_build_deps iperf3
+  src="$(fetch_source iperf3)"
+
+  log "iperf3: rebuilding libiperf against packaged libcjson and exercising the JSON helper routines"
+  run_bash_logged /tmp/iperf3-build.log "
+    cd '$src'
+    python3 - <<'PY'
+from pathlib import Path
+
+makefile = Path('src/Makefile.am')
+text = makefile.read_text()
+if '                        cjson.c \\\\' not in text or '                        cjson.h \\\\' not in text:
+    raise SystemExit('iperf3 Makefile.am no longer lists the vendored cJSON sources')
+text = text.replace('                        cjson.c \\\\\n', '')
+text = text.replace('                        cjson.h \\\\\n', '')
+if 'libiperf_la_LIBADD' not in text:
+    text = text.replace('\\n\\n# Specify the sources and various flags for the iperf binary\\n',
+                        '\\nlibiperf_la_LIBADD      = -lcjson\\n\\n# Specify the sources and various flags for the iperf binary\\n',
+                        1)
+makefile.write_text(text)
+Path('src/cjson.h').write_text('#pragma once\\n#include <cjson/cJSON.h>\\n')
+PY
+    autoreconf -fi
+    ./configure
+    make -C src -j'$(nproc)' iperf3 libiperf.la
+  "
+
+  binary="$src/src/.libs/iperf3"
+  lib_path="$(find "$src/src/.libs" -maxdepth 1 -type f -name 'libiperf.so*' | head -n1)"
+  test -x "$binary" || die "iperf3 binary was not built"
+  [[ -n "$lib_path" ]] || die "iperf3 shared library was not built"
+  run_bash_logged /tmp/iperf3-link-resolution.log "
+    LD_LIBRARY_PATH='$src/src/.libs' ldd '$binary'
+  "
+  grep -E 'libiperf\.so\.0 => .*/src/\.libs/libiperf\.so\.0' /tmp/iperf3-link-resolution.log >/dev/null || {
+    cat /tmp/iperf3-link-resolution.log >&2
+    return 1
+  }
+  grep -F 'libcjson.so.1 =>' /tmp/iperf3-link-resolution.log >/dev/null || {
+    cat /tmp/iperf3-link-resolution.log >&2
+    return 1
+  }
+  assert_links_to_packaged_safe "$lib_path"
+
+  run_bash_logged /tmp/iperf3-json-smoke-build.log "
+    set -euo pipefail
+    python3 - <<'PY'
+import base64
+from pathlib import Path
+
+source_b64 = 'I2luY2x1ZGUgPGludHR5cGVzLmg+CiNpbmNsdWRlIDxzdGRpby5oPgojaW5jbHVkZSA8c3RyaW5nLmg+CgojaW5jbHVkZSAiaXBlcmZfdXRpbC5oIgoKc3RhdGljIGludCBmYWlsKGNvbnN0IGNoYXIgKm1lc3NhZ2UpIHsKICAgIGZwcmludGYoc3RkZXJyLCAiJXNcbiIsIG1lc3NhZ2UpOwogICAgcmV0dXJuIDE7Cn0KCmludCBtYWluKHZvaWQpIHsKICAgIGNKU09OICpyb290ID0gTlVMTDsKICAgIGNKU09OICpwYXJzZWQgPSBOVUxMOwogICAgY0pTT04gKnJvbGUgPSBOVUxMOwogICAgY0pTT04gKnN0cmVhbXMgPSBOVUxMOwogICAgY0pTT04gKnJldmVyc2UgPSBOVUxMOwogICAgY0pTT04gKnJhdGUgPSBOVUxMOwogICAgY2hhciAqcmVuZGVyZWQgPSBOVUxMOwogICAgaW50IHJjID0gMTsKCiAgICByb290ID0gaXBlcmZfanNvbl9wcmludGYoCiAgICAgICAgInJvbGU6ICVzIHN0cmVhbXM6ICVkIHJldmVyc2U6ICViIHJhdGU6ICVmIiwKICAgICAgICAiY2xpZW50IiwKICAgICAgICAoaW50NjRfdCk0LAogICAgICAgIDEsCiAgICAgICAgMTIuNQogICAgKTsKICAgIGlmIChyb290ID09IE5VTEwpIHsKICAgICAgICByZXR1cm4gZmFpbCgiaXBlcmZfanNvbl9wcmludGYgcmV0dXJuZWQgTlVMTCIpOwogICAgfQoKICAgIHJlbmRlcmVkID0gY0pTT05fUHJpbnRVbmZvcm1hdHRlZChyb290KTsKICAgIGlmIChyZW5kZXJlZCA9PSBOVUxMKSB7CiAgICAgICAgY0pTT05fRGVsZXRlKHJvb3QpOwogICAgICAgIHJldHVybiBmYWlsKCJjSlNPTl9QcmludFVuZm9ybWF0dGVkIHJldHVybmVkIE5VTEwiKTsKICAgIH0KCiAgICBwYXJzZWQgPSBjSlNPTl9QYXJzZShyZW5kZXJlZCk7CiAgICBpZiAocGFyc2VkID09IE5VTEwpIHsKICAgICAgICBjSlNPTl9mcmVlKHJlbmRlcmVkKTsKICAgICAgICBjSlNPTl9EZWxldGUocm9vdCk7CiAgICAgICAgcmV0dXJuIGZhaWwoImNKU09OX1BhcnNlIHJlamVjdGVkIHRoZSByZW5kZXJlZCBKU09OIik7CiAgICB9CgogICAgcm9sZSA9IGNKU09OX0dldE9iamVjdEl0ZW1DYXNlU2Vuc2l0aXZlKHBhcnNlZCwgInJvbGUiKTsKICAgIHN0cmVhbXMgPSBjSlNPTl9HZXRPYmplY3RJdGVtQ2FzZVNlbnNpdGl2ZShwYXJzZWQsICJzdHJlYW1zIik7CiAgICByZXZlcnNlID0gY0pTT05fR2V0T2JqZWN0SXRlbUNhc2VTZW5zaXRpdmUocGFyc2VkLCAicmV2ZXJzZSIpOwogICAgcmF0ZSA9IGNKU09OX0dldE9iamVjdEl0ZW1DYXNlU2Vuc2l0aXZlKHBhcnNlZCwgInJhdGUiKTsKICAgIGlmICghY0pTT05fSXNTdHJpbmcocm9sZSkgfHwgc3RyY21wKHJvbGUtPnZhbHVlc3RyaW5nLCAiY2xpZW50IikgIT0gMCkgewogICAgICAgIGdvdG8gY2xlYW51cDsKICAgIH0KICAgIGlmICghY0pTT05fSXNOdW1iZXIoc3RyZWFtcykgfHwgc3RyZWFtcy0+dmFsdWVkb3VibGUgIT0gNCkgewogICAgICAgIGdvdG8gY2xlYW51cDsKICAgIH0KICAgIGlmICghY0pTT05fSXNUcnVlKHJldmVyc2UpKSB7CiAgICAgICAgZ290byBjbGVhbnVwOwogICAgfQogICAgaWYgKCFjSlNPTl9Jc051bWJlcihyYXRlKSB8fCByYXRlLT52YWx1ZWRvdWJsZSAhPSAxMi41KSB7CiAgICAgICAgZ290byBjbGVhbnVwOwogICAgfQoKICAgIHB1dHMocmVuZGVyZWQpOwogICAgcmMgPSAwOwoKY2xlYW51cDoKICAgIGNKU09OX0RlbGV0ZShwYXJzZWQpOwogICAgY0pTT05fZnJlZShyZW5kZXJlZCk7CiAgICBjSlNPTl9EZWxldGUocm9vdCk7CiAgICByZXR1cm4gcmM7Cn0K'
+Path('/tmp/iperf3-json-smoke.c').write_text(
+    base64.b64decode(source_b64).decode('utf-8'),
+    encoding='utf-8',
+)
+PY
+    cc \
+      -I'$src/src' \
+      /tmp/iperf3-json-smoke.c \
+      '$src/src/.libs/libiperf.so' \
+      -lcjson \
+      -o /tmp/iperf3-json-smoke
+  "
+  assert_links_to_packaged_safe /tmp/iperf3-json-smoke
+  run_bash_logged /tmp/iperf3-runtime.log "
+    export LD_LIBRARY_PATH='$src/src/.libs'
+    /tmp/iperf3-json-smoke >/tmp/iperf3-client.json
+  "
+
+  jq -e '.role == "client" and .streams == 4 and .reverse == true and .rate == 12.5' \
+    /tmp/iperf3-client.json >/dev/null || {
+      cat /tmp/iperf3-client.json >&2
+      return 1
+    }
+}
+
+test_epic5() {
+  local src=""
+  local binary=""
+
+  should_run epic5 || return 0
+
+  install_build_deps epic5
+  src="$(fetch_source epic5)"
+
+  log "epic5: rebuilding scripted JSON functions against packaged libcjson and exercising JSON_EXPLODE/JSON_IMPLODE"
+  run_bash_logged /tmp/epic5-build.log "
+    cd '$src'
+    python3 - <<'PY'
+from pathlib import Path
+
+makefile = Path('source/Makefile.in')
+text = makefile.read_text()
+if 'cJSON.o ' not in text:
+    raise SystemExit('epic5 Makefile.in no longer lists cJSON.o')
+text = text.replace('cJSON.o ', '')
+text = text.replace('\$(LIBS)', '\$(LIBS) -lcjson', 1)
+makefile.write_text(text)
+Path('source/cJSON.h').write_text('#pragma once\\n#include <cjson/cJSON.h>\\n')
+regress = Path('regress/json').read_text()
+Path('/tmp/epic5-json-smoke').write_text(
+    regress + '\\necho epic5-json-ok:' + chr(36) + 'misses\\nexit;\\n'
+)
+PY
+    ./configure
+    make -C source -j'$(nproc)' epic5
+  "
+
+  binary="$src/source/epic5"
+  test -x "$binary" || die "epic5 binary was not built"
+  assert_links_to_packaged_safe "$binary"
+
+  run_bash_logged /tmp/epic5-runtime-driver.log "
+    set +e
+    timeout 30 '$binary' -d -B -s -n smoke -l /tmp/epic5-json-smoke > /tmp/epic5-runtime.log 2>&1
+    status=\$?
+    set -e
+    cat /tmp/epic5-runtime.log
+    if [[ \"\$status\" -ne 0 && \"\$status\" -ne 1 ]]; then
+      exit \"\$status\"
+    fi
+  "
+
+  grep -F 'epic5-json-ok:0' /tmp/epic5-runtime.log >/dev/null || {
+    cat /tmp/epic5-runtime.log >&2
+    return 1
+  }
+  ! grep -F '[FAILED!]' /tmp/epic5-runtime.log >/dev/null || {
+    cat /tmp/epic5-runtime.log >&2
+    return 1
+  }
+}
+
 prepare_writable_root
 assert_dependents_inventory
 assert_only_filter
@@ -1440,6 +1636,9 @@ test_oidc_agent
 test_pgagroal
 test_qad
 test_snibbetracker
+test_opm_common
+test_iperf3
+test_epic5
 
 log "All selected dependent checks passed"
 CONTAINER_SCRIPT

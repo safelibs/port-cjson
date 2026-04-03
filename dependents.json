@@ -5,7 +5,7 @@
     "libcjson1",
     "libcjson-dev"
   ],
-  "methodology": "Generated on Ubuntu 24.04.3 LTS using local apt-cache metadata plus spot inspection of the corresponding upstream source trees shipped in the Ubuntu archive.",
+  "methodology": "Generated on Ubuntu 24.04.3 LTS using local apt-cache metadata plus spot inspection of the corresponding upstream source trees shipped in the Ubuntu archive, including optional or vendored cJSON integrations that can be rebuilt against the packaged library inside the Ubuntu 24.04 harness.",
   "dependents": [
     {
       "source_package": "freerdp3",
@@ -182,6 +182,71 @@
       "evidence_paths": [
         "snibbetracker/src/CSynth.c",
         "snibbetracker/src/main.c"
+      ]
+    },
+    {
+      "source_package": "opm-common",
+      "packages": [
+        "libopm-common",
+        "libopm-common-bin"
+      ],
+      "domain": "reservoir simulation",
+      "dependency_kind": [
+        "build-time",
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Parses Eclipse keyword-definition JSON files through Json::JsonObject and the parser keyword loader.",
+        "Serializes well and group state back into JSON objects for runtime reporting and data export."
+      ],
+      "notes": "Ubuntu 24.04 source metadata build-depends on libcjson-dev, and the Debian packaging excludes the vendored external/cjson fallback, so the noble build uses the shared libcjson package.",
+      "evidence_paths": [
+        "src/opm/json/JsonObject.cpp",
+        "src/opm/input/eclipse/Parser/Parser.cpp",
+        "opm/output/data/Wells.hpp",
+        "opm/output/data/Groups.hpp"
+      ]
+    },
+    {
+      "source_package": "iperf3",
+      "packages": [
+        "iperf3",
+        "libiperf0"
+      ],
+      "domain": "network benchmarking",
+      "dependency_kind": [
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "Client and server JSON modes emit structured test-start, interval, and summary objects for throughput runs.",
+        "The shared libiperf codebase builds those JSON result trees through helper routines in iperf_util.c."
+      ],
+      "notes": "Ubuntu 24.04 ships the cJSON sources vendored under src/, and the package does not build-depend on libcjson-dev. The harness swaps that bundled copy out for the packaged safe libcjson to validate JSON-mode compatibility against the system library.",
+      "evidence_paths": [
+        "src/iperf_client_api.c",
+        "src/iperf_server_api.c",
+        "src/iperf_util.c",
+        "src/cjson.h"
+      ]
+    },
+    {
+      "source_package": "epic5",
+      "packages": [
+        "epic5"
+      ],
+      "domain": "IRC client",
+      "dependency_kind": [
+        "runtime"
+      ],
+      "runtime_functionality": [
+        "The scripting engine exposes JSON_EXPLODE, JSON_IMPLODE, and JSON_ERROR builtins backed by cJSON.",
+        "The shipped regress/json script exercises round-trip JSON parsing and serialization through those builtins."
+      ],
+      "notes": "Ubuntu 24.04 ships cJSON vendored in source/, and the package does not build-depend on libcjson-dev. The harness rebuilds epic5 against the packaged safe libcjson to validate the scripted JSON builtins with the system library.",
+      "evidence_paths": [
+        "source/functions.c",
+        "source/Makefile.in",
+        "regress/json"
       ]
     }
   ]
