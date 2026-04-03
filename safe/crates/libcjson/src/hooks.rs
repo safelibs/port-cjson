@@ -127,8 +127,8 @@ pub unsafe extern "C" fn cJSON_InitHooks(hooks: *mut cJSON_Hooks) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_malloc(size: usize) -> *mut c_void {
-    allocate(size)
+pub extern "C" fn cJSON_malloc(size: usize) -> *mut c_void {
+    unsafe { allocate(size) }
 }
 
 #[no_mangle]

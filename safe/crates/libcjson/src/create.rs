@@ -12,24 +12,36 @@ use crate::list::add_item_to_array_internal;
 use crate::number::set_number_fields;
 use crate::tree::cast_away_const;
 
-unsafe fn create_number_item(number: c_double) -> *mut cJSON {
-    let item = new_item();
+fn new_typed_item(item_type: c_int) -> *mut cJSON {
+    let item = unsafe { new_item() };
     if item.is_null() {
         return ptr::null_mut();
     }
 
-    (*item).type_ = cJSON_Number;
-    set_number_fields(item, number);
+    unsafe {
+        (*item).type_ = item_type;
+    }
+    item
+}
+
+fn create_number_item(number: c_double) -> *mut cJSON {
+    let item = new_typed_item(cJSON_Number);
+    if item.is_null() {
+        return ptr::null_mut();
+    }
+
+    unsafe {
+        set_number_fields(item, number);
+    }
     item
 }
 
 unsafe fn create_string_item(string: *const c_char, item_type: c_int) -> *mut cJSON {
-    let item = new_item();
+    let item = new_typed_item(item_type);
     if item.is_null() {
         return ptr::null_mut();
     }
 
-    (*item).type_ = item_type;
     (*item).valuestring = duplicate_c_string(string);
     if !(*item).valuestring.is_null() {
         return item;
@@ -40,37 +52,22 @@ unsafe fn create_string_item(string: *const c_char, item_type: c_int) -> *mut cJ
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateNull() -> *mut cJSON {
-    let item = new_item();
-    if !item.is_null() {
-        (*item).type_ = cJSON_NULL;
-    }
-
-    item
+pub extern "C" fn cJSON_CreateNull() -> *mut cJSON {
+    new_typed_item(cJSON_NULL)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateTrue() -> *mut cJSON {
-    let item = new_item();
-    if !item.is_null() {
-        (*item).type_ = cJSON_True;
-    }
-
-    item
+pub extern "C" fn cJSON_CreateTrue() -> *mut cJSON {
+    new_typed_item(cJSON_True)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateFalse() -> *mut cJSON {
-    let item = new_item();
-    if !item.is_null() {
-        (*item).type_ = cJSON_False;
-    }
-
-    item
+pub extern "C" fn cJSON_CreateFalse() -> *mut cJSON {
+    new_typed_item(cJSON_False)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateBool(boolean: c_int) -> *mut cJSON {
+pub extern "C" fn cJSON_CreateBool(boolean: c_int) -> *mut cJSON {
     if boolean == 0 {
         cJSON_CreateFalse()
     } else {
@@ -79,7 +76,7 @@ pub unsafe extern "C" fn cJSON_CreateBool(boolean: c_int) -> *mut cJSON {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateNumber(num: c_double) -> *mut cJSON {
+pub extern "C" fn cJSON_CreateNumber(num: c_double) -> *mut cJSON {
     create_number_item(num)
 }
 
@@ -94,23 +91,13 @@ pub unsafe extern "C" fn cJSON_CreateRaw(raw: *const c_char) -> *mut cJSON {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateArray() -> *mut cJSON {
-    let item = new_item();
-    if !item.is_null() {
-        (*item).type_ = cJSON_Array;
-    }
-
-    item
+pub extern "C" fn cJSON_CreateArray() -> *mut cJSON {
+    new_typed_item(cJSON_Array)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_CreateObject() -> *mut cJSON {
-    let item = new_item();
-    if !item.is_null() {
-        (*item).type_ = cJSON_Object;
-    }
-
-    item
+pub extern "C" fn cJSON_CreateObject() -> *mut cJSON {
+    new_typed_item(cJSON_Object)
 }
 
 #[no_mangle]

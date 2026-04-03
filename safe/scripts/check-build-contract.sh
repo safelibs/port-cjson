@@ -93,6 +93,35 @@ endif()
 EOF
 cmake -S "$SHARED_STATIC_CONSUMER" -B "$SHARED_STATIC_CONSUMER/build" >/dev/null
 
+MULTIARCH_BUILD="$WORK_DIR/multiarch-build"
+MULTIARCH_INSTALL="$WORK_DIR/multiarch-install"
+MULTIARCH_CONSUMER="$WORK_DIR/multiarch-consumer"
+
+cmake -S "$ROOT_DIR" -B "$MULTIARCH_BUILD" \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_CJSON_TEST=OFF \
+    -DCMAKE_INSTALL_PREFIX="$MULTIARCH_INSTALL" \
+    -DCMAKE_INSTALL_LIBDIR=lib/x86_64-linux-gnu >/dev/null
+cmake --build "$MULTIARCH_BUILD" >/dev/null
+cmake --install "$MULTIARCH_BUILD" >/dev/null
+
+mkdir -p "$MULTIARCH_CONSUMER"
+cat >"$MULTIARCH_CONSUMER/CMakeLists.txt" <<EOF
+cmake_minimum_required(VERSION 3.16)
+project(cjson_multiarch_contract LANGUAGES C)
+list(APPEND CMAKE_PREFIX_PATH "${MULTIARCH_INSTALL}")
+find_package(cJSON CONFIG REQUIRED)
+get_target_property(core_includes cjson INTERFACE_INCLUDE_DIRECTORIES)
+if(NOT core_includes STREQUAL "${MULTIARCH_INSTALL}/include")
+    message(FATAL_ERROR "cjson should expose ${MULTIARCH_INSTALL}/include, got: \${core_includes}")
+endif()
+get_target_property(utils_includes cjson_utils INTERFACE_INCLUDE_DIRECTORIES)
+if(NOT utils_includes STREQUAL "${MULTIARCH_INSTALL}/include")
+    message(FATAL_ERROR "cjson_utils should expose ${MULTIARCH_INSTALL}/include, got: \${utils_includes}")
+endif()
+EOF
+cmake -S "$MULTIARCH_CONSUMER" -B "$MULTIARCH_CONSUMER/build" >/dev/null
+
 UNINSTALL_BUILD="$WORK_DIR/uninstall-build"
 UNINSTALL_INSTALL="$WORK_DIR/uninstall-install"
 

@@ -7,7 +7,7 @@ use crate::abi::{
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_Version() -> *const c_char {
+pub extern "C" fn cJSON_Version() -> *const c_char {
     VERSION.as_ptr() as *const c_char
 }
 

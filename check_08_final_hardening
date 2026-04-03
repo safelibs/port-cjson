@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOUNCE_TARGET=impl_08_final_hardening
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+WORK_DIR=$(mktemp -d)
+
+cleanup() {
+    rm -rf "$WORK_DIR"
+}
+trap cleanup EXIT
+
+fail() {
+    printf 'check_08_final_hardening: %s\n' "$*" >&2
+    exit 1
+}
+
+expect_glob() {
+    local pattern=$1
+    compgen -G "$pattern" >/dev/null || fail "missing expected artifact: $pattern"
+}
+
+find_test_binary() {
+    local build_dir=$1
+    local test_name=$2
+    local candidate
+
+    candidate=$(find "$build_dir" -type f -name "$test_name" -perm -u+x | head -n1 || true)
+    [[ -n "$candidate" ]] || fail "failed to locate test binary '$test_name' under $build_dir"
+    printf '%s\n' "$candidate"
+}
+
+SAFE_BUILD="$WORK_DIR/safe"
+SAFE_LOCALE_OFF_BUILD="$WORK_DIR/safe-locale-off"
+ORIGINAL_LOCALE_ON_BUILD="$WORK_DIR/original-locale-on"
+ORIGINAL_LOCALE_OFF_BUILD="$WORK_DIR/original-locale-off"
+DEB_WORK="$WORK_DIR/debs"
+
+cd "$REPO_ROOT"
+
+cargo test --manifest-path safe/Cargo.toml --workspace
+"$REPO_ROOT/safe/scripts/check-build-contract.sh"
+
+cmake -S "$REPO_ROOT/safe" -B "$SAFE_BUILD" \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_CJSON_TEST=ON \
+    -DENABLE_LOCALES=ON \
+    -DCMAKE_BUILD_TYPE=Release
+cmake --build "$SAFE_BUILD" -j"$(nproc)"
+ctest --test-dir "$SAFE_BUILD" --output-on-failure
+
+"$REPO_ROOT/safe/scripts/check-abi.sh" "$SAFE_BUILD"
+
+"$(find_test_binary "$SAFE_BUILD" number_cve_2023_26819)"
+"$(find_test_binary "$SAFE_BUILD" json_pointer_cve_2025_57052)"
+
+"$REPO_ROOT/safe/scripts/link-original-tests.sh" "$SAFE_BUILD"
+"$REPO_ROOT/safe/scripts/replay-fuzz-corpus.sh" "$SAFE_BUILD"
+
+cmake -S "$REPO_ROOT/original" -B "$ORIGINAL_LOCALE_ON_BUILD" \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_CJSON_TEST=OFF \
+    -DENABLE_LOCALES=ON \
+    -DCMAKE_BUILD_TYPE=Release
+cmake --build "$ORIGINAL_LOCALE_ON_BUILD" -j"$(nproc)"
+
+cmake -S "$REPO_ROOT/original" -B "$ORIGINAL_LOCALE_OFF_BUILD" \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_CJSON_TEST=OFF \
+    -DENABLE_LOCALES=OFF \
+    -DCMAKE_BUILD_TYPE=Release
+cmake --build "$ORIGINAL_LOCALE_OFF_BUILD" -j"$(nproc)"
+
+cmake -S "$REPO_ROOT/safe" -B "$SAFE_LOCALE_OFF_BUILD" \
+    -DENABLE_CJSON_UTILS=ON \
+    -DENABLE_CJSON_TEST=OFF \
+    -DENABLE_LOCALES=OFF \
+    -DCMAKE_BUILD_TYPE=Release
+cmake --build "$SAFE_LOCALE_OFF_BUILD" -j"$(nproc)"
+
+"$REPO_ROOT/safe/scripts/check-locale-compat.sh" \
+    "$ORIGINAL_LOCALE_ON_BUILD" \
+    "$ORIGINAL_LOCALE_OFF_BUILD" \
+    "$SAFE_BUILD" \
+    "$SAFE_LOCALE_OFF_BUILD"
+
+"$REPO_ROOT/safe/scripts/benchmark-compare.sh" "$ORIGINAL_LOCALE_ON_BUILD" "$SAFE_BUILD"
+
+DEB_ARTIFACT_DIR=$("$REPO_ROOT/safe/scripts/build-debs.sh" "$DEB_WORK" | tail -n1)
+expect_glob "$DEB_ARTIFACT_DIR/libcjson1_*.deb"
+expect_glob "$DEB_ARTIFACT_DIR/libcjson-dev_*.deb"
+expect_glob "$DEB_ARTIFACT_DIR/*.changes"
+expect_glob "$DEB_ARTIFACT_DIR/*.buildinfo"
+
+"$REPO_ROOT/test-original.sh"

@@ -12,6 +12,6 @@ pub fn set_parse_error(pointer: *const c_char) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cJSON_GetErrorPtr() -> *const c_char {
+pub extern "C" fn cJSON_GetErrorPtr() -> *const c_char {
     GLOBAL_PARSE_ERROR.load(Ordering::Relaxed) as *const c_char
 }
