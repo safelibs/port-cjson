@@ -74,6 +74,25 @@ run_case override-static no yes \
 run_case shared-and-static yes yes \
     -DBUILD_SHARED_AND_STATIC_LIBS=ON
 
+SHARED_STATIC_INSTALL="$WORK_DIR/shared-and-static-install"
+SHARED_STATIC_CONSUMER="$WORK_DIR/shared-and-static-consumer"
+mkdir -p "$SHARED_STATIC_CONSUMER"
+cat >"$SHARED_STATIC_CONSUMER/CMakeLists.txt" <<EOF
+cmake_minimum_required(VERSION 3.16)
+project(cjson_shared_static_contract LANGUAGES C)
+list(APPEND CMAKE_PREFIX_PATH "${SHARED_STATIC_INSTALL}")
+find_package(cJSON CONFIG REQUIRED)
+get_target_property(utils_static_links cjson_utils-static INTERFACE_LINK_LIBRARIES)
+if(NOT utils_static_links STREQUAL "cjson-static")
+    message(FATAL_ERROR "cjson_utils-static should link to cjson-static, got: \${utils_static_links}")
+endif()
+get_target_property(core_static_path cjson-static IMPORTED_LOCATION)
+if(NOT core_static_path MATCHES "libcjson\\\\.a$")
+    message(FATAL_ERROR "cjson-static should resolve to libcjson.a, got: \${core_static_path}")
+endif()
+EOF
+cmake -S "$SHARED_STATIC_CONSUMER" -B "$SHARED_STATIC_CONSUMER/build" >/dev/null
+
 UNINSTALL_BUILD="$WORK_DIR/uninstall-build"
 UNINSTALL_INSTALL="$WORK_DIR/uninstall-install"
 

@@ -322,7 +322,14 @@ if(ENABLE_CJSON_UTILS)
             " PROPERTIES\n"
             "    IMPORTED_LOCATION \"\${_IMPORT_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcjson_utils${CMAKE_STATIC_LIBRARY_SUFFIX}\"\n"
             "    INTERFACE_INCLUDE_DIRECTORIES \"\${_IMPORT_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\"\n"
-            "    INTERFACE_LINK_LIBRARIES \"cjson\"\n"
+            "    INTERFACE_LINK_LIBRARIES \"")
+        if(BUILD_SHARED_AND_STATIC_LIBS)
+            string(APPEND CJSON_UTILS_TARGET_EXPORT_CONTENT "cjson-static")
+        else()
+            string(APPEND CJSON_UTILS_TARGET_EXPORT_CONTENT "cjson")
+        endif()
+        string(APPEND CJSON_UTILS_TARGET_EXPORT_CONTENT
+            "\"\n"
             "  )\n"
             "endif()\n")
     endif()
