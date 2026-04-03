@@ -28,5 +28,46 @@ if(FLAG_SUPPORTED_Wswitchenum)
     target_compile_options(unity PRIVATE "-Wno-switch-enum")
 endif()
 
+option(ENABLE_VALGRIND OFF "Enable the valgrind memory checker for the tests.")
+if(ENABLE_VALGRIND)
+    find_program(MEMORYCHECK_COMMAND valgrind)
+    if("${MEMORYCHECK_COMMAND}" MATCHES "MEMORYCHECK_COMMAND-NOTFOUND")
+        message(WARNING "Valgrind couldn't be found.")
+        unset(MEMORYCHECK_COMMAND)
+    else()
+        set(MEMORYCHECK_COMMAND_OPTIONS --trace-children=yes --leak-check=full --error-exitcode=1)
+    endif()
+endif()
+
+function(add_safe_unity_test test_name source_file)
+    add_executable("${test_name}" "${source_file}")
+    target_include_directories("${test_name}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries("${test_name}" PRIVATE "${CJSON_CORE_SHARED_OUTPUT}" unity)
+    if(NOT WIN32)
+        target_link_libraries("${test_name}" PRIVATE m)
+    endif()
+    add_dependencies("${test_name}" cjson-core-artifacts)
+    set_target_properties("${test_name}" PROPERTIES BUILD_RPATH "${CJSON_CARGO_PROFILE_DIR}")
+
+    if(MEMORYCHECK_COMMAND)
+        add_test(NAME "${test_name}"
+            COMMAND "${MEMORYCHECK_COMMAND}" ${MEMORYCHECK_COMMAND_OPTIONS} "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
+    else()
+        add_test(NAME "${test_name}"
+            COMMAND "./${test_name}")
+    endif()
+endfunction()
+
+set(core_tree_tests
+    cjson_add
+    core_layout_smoke
+    core_hooks_smoke
+)
+
+add_safe_unity_test(cjson_add "${CMAKE_CURRENT_SOURCE_DIR}/cjson_add.c")
+add_safe_unity_test(core_layout_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_layout_smoke.c")
+add_safe_unity_test(core_hooks_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_hooks_smoke.c")
+
 add_custom_target(check
     COMMAND "${CMAKE_CTEST_COMMAND}" --output-on-failure)
+add_dependencies(check ${core_tree_tests})
