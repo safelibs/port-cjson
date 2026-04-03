@@ -54,6 +54,7 @@ static void assert_not_object(const char *json)
 
     if (item == NULL)
     {
+        TEST_ASSERT_NULL_MESSAGE(item, "Malformed JSON should not parse.");
         return;
     }
 
