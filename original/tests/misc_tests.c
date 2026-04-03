@@ -358,8 +358,8 @@ static void cjson_functions_should_not_crash_with_null_pointers(void)
     cJSON *corruptedString = cJSON_CreateString("corrupted");
     struct cJSON *originalPrev;
 
-    add_item_to_array(array, item1);
-    add_item_to_array(array, item2);
+    TEST_ASSERT_TRUE(cJSON_AddItemToArray(array, item1));
+    TEST_ASSERT_TRUE(cJSON_AddItemToArray(array, item2));
 
     originalPrev = item2->prev;
     item2->prev = NULL;
@@ -455,44 +455,55 @@ static void cjson_functions_should_not_crash_with_null_pointers(void)
     cJSON_Delete(item);
 }
 
-static void *CJSON_CDECL failing_realloc(void *pointer, size_t size)
+static void CJSON_CDECL normal_free(void *pointer)
 {
-    (void)size;
-    (void)pointer;
-    return NULL;
+    free(pointer);
 }
 
-static void ensure_should_fail_on_failed_realloc(void)
-{
-    printbuffer buffer = {NULL, 10, 0, 0, false, false, {&malloc, &free, &failing_realloc}};
-    buffer.buffer = (unsigned char *)malloc(100);
-    TEST_ASSERT_NOT_NULL(buffer.buffer);
+static int allocations_remaining = 0;
 
-    TEST_ASSERT_NULL_MESSAGE(ensure(&buffer, 200), "Ensure didn't fail with failing realloc.");
+static void *CJSON_CDECL limited_malloc(size_t size)
+{
+    if (allocations_remaining <= 0)
+    {
+        return NULL;
+    }
+
+    allocations_remaining--;
+    return malloc(size);
 }
 
-static void skip_utf8_bom_should_skip_bom(void)
+static void cjson_print_buffered_should_fail_when_growth_allocation_fails(void)
 {
-    const unsigned char string[] = "\xEF\xBB\xBF{}";
-    parse_buffer buffer = {0, 0, 0, 0, {0, 0, 0}};
-    buffer.content = string;
-    buffer.length = sizeof(string);
-    buffer.hooks = global_hooks;
+    cJSON_Hooks limited_hooks = {limited_malloc, normal_free};
+    cJSON *array = cJSON_Parse("[1,2,3,4,5,6,7,8]");
 
-    TEST_ASSERT_TRUE(skip_utf8_bom(&buffer) == &buffer);
-    TEST_ASSERT_EQUAL_UINT(3U, (unsigned int)buffer.offset);
+    TEST_ASSERT_NOT_NULL(array);
+
+    allocations_remaining = 1;
+    cJSON_InitHooks(&limited_hooks);
+    TEST_ASSERT_NULL_MESSAGE(cJSON_PrintBuffered(array, 1, false), "Buffered print should fail when the growth allocation fails.");
+    cJSON_InitHooks(NULL);
+
+    cJSON_Delete(array);
 }
 
-static void skip_utf8_bom_should_not_skip_bom_if_not_at_beginning(void)
+static void cjson_parse_should_skip_utf8_bom_at_start(void)
 {
-    const unsigned char string[] = " \xEF\xBB\xBF{}";
-    parse_buffer buffer = {0, 0, 0, 0, {0, 0, 0}};
-    buffer.content = string;
-    buffer.length = sizeof(string);
-    buffer.hooks = global_hooks;
-    buffer.offset = 1;
+    cJSON *with_bom = cJSON_Parse("\xEF\xBB\xBF{}");
+    cJSON *without_bom = cJSON_Parse("{}");
 
-    TEST_ASSERT_NULL(skip_utf8_bom(&buffer));
+    TEST_ASSERT_NOT_NULL(with_bom);
+    TEST_ASSERT_NOT_NULL(without_bom);
+    TEST_ASSERT_TRUE(cJSON_Compare(with_bom, without_bom, true));
+
+    cJSON_Delete(with_bom);
+    cJSON_Delete(without_bom);
+}
+
+static void cjson_parse_should_not_skip_utf8_bom_after_whitespace(void)
+{
+    TEST_ASSERT_NULL(cJSON_Parse(" \xEF\xBB\xBF{}"));
 }
 
 static void cjson_get_string_value_should_get_a_string(void)
@@ -589,12 +600,13 @@ static void cjson_add_item_to_object_should_not_use_after_free_when_string_is_al
 {
     cJSON *object = cJSON_CreateObject();
     cJSON *number = cJSON_CreateNumber(42);
-    char *name = (char *)cJSON_strdup((const unsigned char *)"number", &global_hooks);
+    char *name = (char *)cJSON_malloc(strlen("number") + 1);
 
     TEST_ASSERT_NOT_NULL(object);
     TEST_ASSERT_NOT_NULL(number);
     TEST_ASSERT_NOT_NULL(name);
 
+    strcpy(name, "number");
     number->string = name;
 
     /* The following should not have a use after free
@@ -748,9 +760,9 @@ int CJSON_CDECL main(void)
     RUN_TEST(cjson_replace_item_via_pointer_should_replace_items);
     RUN_TEST(cjson_replace_item_in_object_should_preserve_name);
     RUN_TEST(cjson_functions_should_not_crash_with_null_pointers);
-    RUN_TEST(ensure_should_fail_on_failed_realloc);
-    RUN_TEST(skip_utf8_bom_should_skip_bom);
-    RUN_TEST(skip_utf8_bom_should_not_skip_bom_if_not_at_beginning);
+    RUN_TEST(cjson_print_buffered_should_fail_when_growth_allocation_fails);
+    RUN_TEST(cjson_parse_should_skip_utf8_bom_at_start);
+    RUN_TEST(cjson_parse_should_not_skip_utf8_bom_after_whitespace);
     RUN_TEST(cjson_get_string_value_should_get_a_string);
     RUN_TEST(cjson_get_number_value_should_get_a_number);
     RUN_TEST(cjson_create_string_reference_should_create_a_string_reference);

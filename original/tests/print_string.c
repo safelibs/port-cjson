@@ -26,22 +26,26 @@
 
 static void assert_print_string(const char *expected, const char *input)
 {
-    unsigned char printed[1024];
-    printbuffer buffer = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };
-    buffer.buffer = printed;
-    buffer.length = sizeof(printed);
-    buffer.offset = 0;
-    buffer.noalloc = true;
-    buffer.hooks = global_hooks;
+    cJSON *item = cJSON_CreateString(input);
+    char *printed = NULL;
 
-    TEST_ASSERT_TRUE_MESSAGE(print_string_ptr((const unsigned char*)input, &buffer), "Failed to print string.");
+    TEST_ASSERT_NOT_NULL_MESSAGE(item, "Failed to create string item.");
+    printed = cJSON_PrintUnformatted(item);
+    TEST_ASSERT_NOT_NULL_MESSAGE(printed, "Failed to print string.");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, printed, "The printed string isn't as expected.");
+
+    cJSON_free(printed);
+    cJSON_Delete(item);
 }
 
 static void print_string_should_print_empty_strings(void)
 {
     assert_print_string("\"\"", "");
-    assert_print_string("\"\"", NULL);
+}
+
+static void print_string_should_reject_null_input(void)
+{
+    TEST_ASSERT_NULL(cJSON_CreateString(NULL));
 }
 
 static void print_string_should_print_ascii(void)
@@ -67,10 +71,10 @@ static void print_string_should_print_utf8(void)
 
 int CJSON_CDECL main(void)
 {
-    /* initialize cJSON item */
     UNITY_BEGIN();
 
     RUN_TEST(print_string_should_print_empty_strings);
+    RUN_TEST(print_string_should_reject_null_input);
     RUN_TEST(print_string_should_print_ascii);
     RUN_TEST(print_string_should_print_utf8);
 

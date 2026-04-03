@@ -202,7 +202,7 @@ static int supports_full_hd(const char * const monitor)
             goto end;
         }
 
-        if (compare_double(width->valuedouble, 1920) && compare_double(height->valuedouble, 1080))
+        if ((cJSON_GetNumberValue(width) == 1920.0) && (cJSON_GetNumberValue(height) == 1080.0))
         {
             status = 1;
             goto end;

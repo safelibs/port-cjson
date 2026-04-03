@@ -28,46 +28,91 @@
 #include "unity/src/unity.h"
 #include "common.h"
 
-static void parse_hex4_should_parse_all_combinations(void)
+static cJSON *parse_unicode_escape(const char *digits)
+{
+    char json[16];
+    const char *parse_end = NULL;
+    cJSON *item = NULL;
+
+    TEST_ASSERT_EQUAL_INT_MESSAGE(8, sprintf(json, "\"\\u%s\"", digits), "sprintf failed.");
+
+    item = cJSON_ParseWithOpts(json, &parse_end, false);
+    if (item != NULL)
+    {
+        TEST_ASSERT_EQUAL_PTR_MESSAGE(json + strlen(json), parse_end, "Did not parse the whole unicode escape.");
+        TEST_ASSERT_TRUE_MESSAGE(cJSON_IsString(item), "Unicode escape did not parse as a string.");
+    }
+
+    return item;
+}
+
+static void unicode_escape_parsing_should_accept_all_non_surrogate_combinations(void)
 {
     unsigned int number = 0;
-    unsigned char digits_lower[6];
-    unsigned char digits_upper[6];
-    /* test all combinations */
+    char digits_lower[5];
+    char digits_upper[5];
+
     for (number = 0; number <= 0xFFFF; number++)
     {
-        TEST_ASSERT_EQUAL_INT_MESSAGE(4, sprintf((char*)digits_lower, "%.4x", number), "sprintf failed.");
-        TEST_ASSERT_EQUAL_INT_MESSAGE(4, sprintf((char*)digits_upper, "%.4X", number), "sprintf failed.");
+        cJSON *lower = NULL;
+        cJSON *upper = NULL;
+        const cJSON_bool is_surrogate = ((number >= 0xD800U) && (number <= 0xDFFFU));
 
-        TEST_ASSERT_EQUAL_INT_MESSAGE(number, parse_hex4(digits_lower), "Failed to parse lowercase digits.");
-        TEST_ASSERT_EQUAL_INT_MESSAGE(number, parse_hex4(digits_upper), "Failed to parse uppercase digits.");
+        TEST_ASSERT_EQUAL_INT_MESSAGE(4, sprintf(digits_lower, "%.4x", number), "sprintf failed.");
+        TEST_ASSERT_EQUAL_INT_MESSAGE(4, sprintf(digits_upper, "%.4X", number), "sprintf failed.");
+
+        lower = parse_unicode_escape(digits_lower);
+        upper = parse_unicode_escape(digits_upper);
+
+        if (is_surrogate)
+        {
+            TEST_ASSERT_NULL_MESSAGE(lower, "Standalone lowercase surrogate escape should not parse.");
+            TEST_ASSERT_NULL_MESSAGE(upper, "Standalone uppercase surrogate escape should not parse.");
+        }
+        else
+        {
+            TEST_ASSERT_NOT_NULL_MESSAGE(lower, "Lowercase unicode escape should parse.");
+            TEST_ASSERT_NOT_NULL_MESSAGE(upper, "Uppercase unicode escape should parse.");
+            TEST_ASSERT_EQUAL_STRING_MESSAGE(cJSON_GetStringValue(lower), cJSON_GetStringValue(upper), "Unicode escape parsing changed with hex digit casing.");
+        }
+
+        cJSON_Delete(lower);
+        cJSON_Delete(upper);
     }
 }
 
-static void parse_hex4_should_parse_mixed_case(void)
+static void unicode_escape_parsing_should_accept_mixed_case_hex_digits(void)
 {
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"beef"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"beeF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"beEf"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"beEF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"bEef"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"bEeF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"bEEf"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"bEEF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"Beef"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BeeF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BeEf"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BeEF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BEef"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BEeF"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BEEf"));
-    TEST_ASSERT_EQUAL_INT(0xBEEF, parse_hex4((const unsigned char*)"BEEF"));
+    static const char *const variants[] =
+    {
+        "beef", "beeF", "beEf", "beEF",
+        "bEef", "bEeF", "bEEf", "bEEF",
+        "Beef", "BeeF", "BeEf", "BeEF",
+        "BEef", "BEeF", "BEEf", "BEEF"
+    };
+    cJSON *reference = NULL;
+    size_t i = 0;
+
+    reference = parse_unicode_escape("BEEF");
+    TEST_ASSERT_NOT_NULL(reference);
+
+    for (i = 0; i < (sizeof(variants) / sizeof(variants[0])); i++)
+    {
+        cJSON *item = parse_unicode_escape(variants[i]);
+
+        TEST_ASSERT_NOT_NULL(item);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(cJSON_GetStringValue(reference), cJSON_GetStringValue(item), "Mixed-case unicode escape parsed differently.");
+
+        cJSON_Delete(item);
+    }
+
+    cJSON_Delete(reference);
 }
 
 int CJSON_CDECL main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(parse_hex4_should_parse_all_combinations);
-    RUN_TEST(parse_hex4_should_parse_mixed_case);
+    RUN_TEST(unicode_escape_parsing_should_accept_all_non_surrogate_combinations);
+    RUN_TEST(unicode_escape_parsing_should_accept_mixed_case_hex_digits);
     return UNITY_END();
 }

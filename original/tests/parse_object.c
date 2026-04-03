@@ -28,8 +28,6 @@
 #include "unity/src/unity.h"
 #include "common.h"
 
-static cJSON item[1];
-
 static void assert_is_object(cJSON *object_item)
 {
     TEST_ASSERT_NOT_NULL_MESSAGE(object_item, "Item is NULL.");
@@ -52,69 +50,81 @@ static void assert_is_child(cJSON *child_item, const char *name, int type)
 
 static void assert_not_object(const char *json)
 {
-    parse_buffer parsebuffer = { 0, 0, 0, 0, { 0, 0, 0 } };
-    parsebuffer.content = (const unsigned char*)json;
-    parsebuffer.length = strlen(json) + sizeof("");
-    parsebuffer.hooks = global_hooks;
+    cJSON *item = cJSON_Parse(json);
 
-    TEST_ASSERT_FALSE(parse_object(item, &parsebuffer));
-    assert_is_invalid(item);
-    reset(item);
+    if (item == NULL)
+    {
+        return;
+    }
+
+    TEST_ASSERT_FALSE_MESSAGE(cJSON_IsObject(item), "JSON value should not parse as an object.");
+    cJSON_Delete(item);
 }
 
-static void assert_parse_object(const char *json)
+static cJSON *assert_parse_object(const char *json)
 {
-    parse_buffer parsebuffer = { 0, 0, 0, 0, { 0, 0, 0 } };
-    parsebuffer.content = (const unsigned char*)json;
-    parsebuffer.length = strlen(json) + sizeof("");
-    parsebuffer.hooks = global_hooks;
+    const char *parse_end = NULL;
+    cJSON *item = cJSON_ParseWithOpts(json, &parse_end, false);
 
-    TEST_ASSERT_TRUE(parse_object(item, &parsebuffer));
+    TEST_ASSERT_NOT_NULL_MESSAGE(item, "Failed to parse object.");
+    TEST_ASSERT_EQUAL_PTR_MESSAGE(json + strlen(json), parse_end, "Did not parse the whole object.");
     assert_is_object(item);
+
+    return item;
 }
 
 static void parse_object_should_parse_empty_objects(void)
 {
-    assert_parse_object("{}");
-    assert_has_no_child(item);
-    reset(item);
+    cJSON *item = assert_parse_object("{}");
+    TEST_ASSERT_EQUAL_INT(0, cJSON_GetArraySize(item));
+    cJSON_Delete(item);
 
-    assert_parse_object("{\n\t}");
-    assert_has_no_child(item);
-    reset(item);
+    item = assert_parse_object("{\n\t}");
+    TEST_ASSERT_EQUAL_INT(0, cJSON_GetArraySize(item));
+    cJSON_Delete(item);
 }
 
 static void parse_object_should_parse_objects_with_one_element(void)
 {
+    cJSON *item = NULL;
 
-    assert_parse_object("{\"one\":1}");
-    assert_is_child(item->child, "one", cJSON_Number);
-    reset(item);
+    item = assert_parse_object("{\"one\":1}");
+    assert_is_child(cJSON_GetObjectItemCaseSensitive(item, "one"), "one", cJSON_Number);
+    cJSON_Delete(item);
 
-    assert_parse_object("{\"hello\":\"world!\"}");
-    assert_is_child(item->child, "hello", cJSON_String);
-    reset(item);
+    item = assert_parse_object("{\"hello\":\"world!\"}");
+    assert_is_child(cJSON_GetObjectItemCaseSensitive(item, "hello"), "hello", cJSON_String);
+    cJSON_Delete(item);
 
-    assert_parse_object("{\"array\":[]}");
-    assert_is_child(item->child, "array", cJSON_Array);
-    reset(item);
+    item = assert_parse_object("{\"array\":[]}");
+    assert_is_child(cJSON_GetObjectItemCaseSensitive(item, "array"), "array", cJSON_Array);
+    cJSON_Delete(item);
 
-    assert_parse_object("{\"null\":null}");
-    assert_is_child(item->child, "null", cJSON_NULL);
-    reset(item);
+    item = assert_parse_object("{\"null\":null}");
+    assert_is_child(cJSON_GetObjectItemCaseSensitive(item, "null"), "null", cJSON_NULL);
+    cJSON_Delete(item);
 }
 
 static void parse_object_should_parse_objects_with_multiple_elements(void)
 {
-    assert_parse_object("{\"one\":1\t,\t\"two\"\n:2, \"three\":3}");
-    assert_is_child(item->child, "one", cJSON_Number);
-    assert_is_child(item->child->next, "two", cJSON_Number);
-    assert_is_child(item->child->next->next, "three", cJSON_Number);
-    reset(item);
+    cJSON *item = assert_parse_object("{\"one\":1\t,\t\"two\"\n:2, \"three\":3}");
+    cJSON *node = NULL;
+    static const char *const first_expected_names[] = {"one", "two", "three"};
+    int index = 0;
+
+    cJSON_ArrayForEach(node, item)
+    {
+        TEST_ASSERT_TRUE(index < 3);
+        assert_is_child(node, first_expected_names[index], cJSON_Number);
+        index++;
+    }
+    TEST_ASSERT_EQUAL_INT(3, index);
+    cJSON_Delete(item);
 
     {
-        size_t i = 0;
-        cJSON *node = NULL;
+        size_t mixed_index = 0;
+        cJSON *mixed = NULL;
+        cJSON *mixed_node = NULL;
         int expected_types[7] =
         {
             cJSON_Number,
@@ -125,7 +135,7 @@ static void parse_object_should_parse_objects_with_multiple_elements(void)
             cJSON_String,
             cJSON_Object
         };
-        const char *expected_names[7] =
+        const char *mixed_expected_names[7] =
         {
             "one",
             "NULL",
@@ -135,19 +145,15 @@ static void parse_object_should_parse_objects_with_multiple_elements(void)
             "world",
             "object"
         };
-        assert_parse_object("{\"one\":1, \"NULL\":null, \"TRUE\":true, \"FALSE\":false, \"array\":[], \"world\":\"hello\", \"object\":{}}");
+        mixed = assert_parse_object("{\"one\":1, \"NULL\":null, \"TRUE\":true, \"FALSE\":false, \"array\":[], \"world\":\"hello\", \"object\":{}}");
 
-        node = item->child;
-        for (
-                i = 0;
-                (i < (sizeof(expected_types)/sizeof(int)))
-                && (node != NULL);
-                (void)i++, node = node->next)
+        cJSON_ArrayForEach(mixed_node, mixed)
         {
-            assert_is_child(node, expected_names[i], expected_types[i]);
+            assert_is_child(mixed_node, mixed_expected_names[mixed_index], expected_types[mixed_index]);
+            mixed_index++;
         }
-        TEST_ASSERT_EQUAL_INT(i, 7);
-        reset(item);
+        TEST_ASSERT_EQUAL_INT(mixed_index, 7);
+        cJSON_Delete(mixed);
     }
 }
 
@@ -164,9 +170,6 @@ static void parse_object_should_not_parse_non_objects(void)
 
 int CJSON_CDECL main(void)
 {
-    /* initialize cJSON item */
-    memset(item, 0, sizeof(cJSON));
-
     UNITY_BEGIN();
     RUN_TEST(parse_object_should_parse_empty_objects);
     RUN_TEST(parse_object_should_not_parse_non_objects);

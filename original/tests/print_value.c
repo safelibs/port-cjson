@@ -30,28 +30,19 @@
 
 static void assert_print_value(const char *input)
 {
-    unsigned char printed[1024];
-    cJSON item[1];
-    printbuffer buffer = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };
-    parse_buffer parsebuffer = { 0, 0, 0, 0, { 0, 0, 0 } };
-    buffer.buffer = printed;
-    buffer.length = sizeof(printed);
-    buffer.offset = 0;
-    buffer.noalloc = true;
-    buffer.hooks = global_hooks;
+    const char *parse_end = NULL;
+    cJSON *item = cJSON_ParseWithOpts(input, &parse_end, false);
+    char *printed = NULL;
 
-    parsebuffer.content = (const unsigned char*)input;
-    parsebuffer.length = strlen(input) + sizeof("");
-    parsebuffer.hooks = global_hooks;
+    TEST_ASSERT_NOT_NULL_MESSAGE(item, "Failed to parse value.");
+    TEST_ASSERT_EQUAL_PTR_MESSAGE(input + strlen(input), parse_end, "Did not parse the whole value.");
 
-    memset(item, 0, sizeof(item));
+    printed = cJSON_PrintUnformatted(item);
+    TEST_ASSERT_NOT_NULL_MESSAGE(printed, "Failed to print value.");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(input, printed, "Printed value is not as expected.");
 
-    TEST_ASSERT_TRUE_MESSAGE(parse_value(item, &parsebuffer), "Failed to parse value.");
-
-    TEST_ASSERT_TRUE_MESSAGE(print_value(item, &buffer), "Failed to print value.");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(input, buffer.buffer, "Printed value is not as expected.");
-
-    reset(item);
+    cJSON_free(printed);
+    cJSON_Delete(item);
 }
 
 static void print_value_should_print_null(void)
@@ -92,7 +83,6 @@ static void print_value_should_print_object(void)
 
 int CJSON_CDECL main(void)
 {
-    /* initialize cJSON item */
     UNITY_BEGIN();
 
     RUN_TEST(print_value_should_print_null);

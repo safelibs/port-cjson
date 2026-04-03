@@ -28,8 +28,6 @@
 #include "unity/src/unity.h"
 #include "common.h"
 
-static cJSON item[1];
-
 static void assert_is_number(cJSON *number_item)
 {
     TEST_ASSERT_NOT_NULL_MESSAGE(number_item, "Item is NULL.");
@@ -45,14 +43,15 @@ static void assert_is_number(cJSON *number_item)
 
 static void assert_parse_number(const char *string, int integer, double real)
 {
-    parse_buffer buffer = { 0, 0, 0, 0, { 0, 0, 0 } };
-    buffer.content = (const unsigned char*)string;
-    buffer.length = strlen(string) + sizeof("");
+    const char *parse_end = NULL;
+    cJSON *item = cJSON_ParseWithOpts(string, &parse_end, false);
 
-    TEST_ASSERT_TRUE(parse_number(item, &buffer));
+    TEST_ASSERT_NOT_NULL_MESSAGE(item, "Couldn't parse number.");
+    TEST_ASSERT_EQUAL_PTR_MESSAGE(string + strlen(string), parse_end, "Did not parse the whole number.");
     assert_is_number(item);
     TEST_ASSERT_EQUAL_INT(integer, item->valueint);
     TEST_ASSERT_EQUAL_DOUBLE(real, item->valuedouble);
+    cJSON_Delete(item);
 }
 
 static void parse_number_should_parse_zero(void)
@@ -98,8 +97,6 @@ static void parse_number_should_parse_negative_reals(void)
 
 int CJSON_CDECL main(void)
 {
-    /* initialize cJSON item */
-    memset(item, 0, sizeof(cJSON));
     UNITY_BEGIN();
     RUN_TEST(parse_number_should_parse_zero);
     RUN_TEST(parse_number_should_parse_negative_integers);

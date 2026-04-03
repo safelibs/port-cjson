@@ -26,46 +26,26 @@
 
 static void assert_print_object(const char * const expected, const char * const input)
 {
-    unsigned char printed_unformatted[1024];
-    unsigned char printed_formatted[1024];
+    const char *parse_end = NULL;
+    cJSON *item = cJSON_ParseWithOpts(input, &parse_end, false);
+    char *printed_unformatted = NULL;
+    char *printed_formatted = NULL;
 
-    cJSON item[1];
+    TEST_ASSERT_NOT_NULL_MESSAGE(item, "Failed to parse object.");
+    TEST_ASSERT_EQUAL_PTR_MESSAGE(input + strlen(input), parse_end, "Did not parse the whole object.");
+    TEST_ASSERT_TRUE_MESSAGE(cJSON_IsObject(item), "Input did not parse as an object.");
 
-    printbuffer formatted_buffer = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };
-    printbuffer unformatted_buffer = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };
-    parse_buffer parsebuffer = { 0, 0, 0, 0, { 0, 0, 0 } };
-
-    /* buffer for parsing */
-    parsebuffer.content = (const unsigned char*)input;
-    parsebuffer.length = strlen(input) + sizeof("");
-    parsebuffer.hooks = global_hooks;
-
-    /* buffer for formatted printing */
-    formatted_buffer.buffer = printed_formatted;
-    formatted_buffer.length = sizeof(printed_formatted);
-    formatted_buffer.offset = 0;
-    formatted_buffer.noalloc = true;
-    formatted_buffer.hooks = global_hooks;
-
-    /* buffer for unformatted printing */
-    unformatted_buffer.buffer = printed_unformatted;
-    unformatted_buffer.length = sizeof(printed_unformatted);
-    unformatted_buffer.offset = 0;
-    unformatted_buffer.noalloc = true;
-    unformatted_buffer.hooks = global_hooks;
-
-    memset(item, 0, sizeof(item));
-    TEST_ASSERT_TRUE_MESSAGE(parse_object(item, &parsebuffer), "Failed to parse object.");
-
-    unformatted_buffer.format = false;
-    TEST_ASSERT_TRUE_MESSAGE(print_object(item, &unformatted_buffer), "Failed to print unformatted string.");
+    printed_unformatted = cJSON_PrintUnformatted(item);
+    TEST_ASSERT_NOT_NULL_MESSAGE(printed_unformatted, "Failed to print unformatted object.");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(input, printed_unformatted, "Unformatted object is not correct.");
 
-    formatted_buffer.format = true;
-    TEST_ASSERT_TRUE_MESSAGE(print_object(item, &formatted_buffer), "Failed to print formatted string.");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, printed_formatted, "Formatted ojbect is not correct.");
+    printed_formatted = cJSON_Print(item);
+    TEST_ASSERT_NOT_NULL_MESSAGE(printed_formatted, "Failed to print formatted object.");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, printed_formatted, "Formatted object is not correct.");
 
-    reset(item);
+    cJSON_free(printed_formatted);
+    cJSON_free(printed_unformatted);
+    cJSON_Delete(item);
 }
 
 static void print_object_should_print_empty_objects(void)
@@ -90,7 +70,6 @@ static void print_object_should_print_objects_with_multiple_elements(void)
 
 int CJSON_CDECL main(void)
 {
-    /* initialize cJSON item */
     UNITY_BEGIN();
 
     RUN_TEST(print_object_should_print_empty_objects);

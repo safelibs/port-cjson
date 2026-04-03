@@ -23,25 +23,23 @@
 #ifndef CJSON_TESTS_COMMON_H
 #define CJSON_TESTS_COMMON_H
 
-#include "../cJSON.c"
+#include <limits.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-void reset(cJSON *item);
-void reset(cJSON *item) {
-    if ((item != NULL) && (item->child != NULL))
-    {
-        cJSON_Delete(item->child);
-    }
-    if ((item->valuestring != NULL) && !(item->type & cJSON_IsReference))
-    {
-        global_hooks.deallocate(item->valuestring);
-    }
-    if ((item->string != NULL) && !(item->type & cJSON_StringIsConst))
-    {
-        global_hooks.deallocate(item->string);
-    }
+#include "../cJSON.h"
 
-    memset(item, 0, sizeof(cJSON));
-}
+#ifdef true
+#undef true
+#endif
+#define true ((cJSON_bool)1)
+
+#ifdef false
+#undef false
+#endif
+#define false ((cJSON_bool)0)
 
 char* read_file(const char *filename);
 char* read_file(const char *filename) {
