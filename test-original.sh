@@ -77,7 +77,7 @@ docker run \
   -v "$ROOT":/work:ro \
   "$IMAGE_TAG" \
   bash -s <<'CONTAINER_SCRIPT'
-set -euo pipefail
+set -Eeuo pipefail
 
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
@@ -88,6 +88,10 @@ ONLY="${CJSON_TEST_ONLY:-}"
 APT_UPDATED=0
 CJSON_MULTIARCH="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
 CJSON_LIBDIR="/usr/lib/$CJSON_MULTIARCH"
+CURRENT_DEPENDENT=""
+CURRENT_FAILURE_CLASS=""
+CURRENT_FAILURE_STAGE=""
+FAILURE_CONTEXT_REPORTED=0
 declare -A BUILD_DEPS_READY=()
 declare -A SOURCE_DIRS=()
 
@@ -96,8 +100,48 @@ log() {
 }
 
 die() {
+  report_failure_context 1
   printf 'error: %s\n' "$*" >&2
   exit 1
+}
+
+set_failure_context() {
+  CURRENT_DEPENDENT="$1"
+  CURRENT_FAILURE_CLASS="$2"
+  CURRENT_FAILURE_STAGE="$3"
+  FAILURE_CONTEXT_REPORTED=0
+}
+
+clear_failure_context() {
+  CURRENT_DEPENDENT=""
+  CURRENT_FAILURE_CLASS=""
+  CURRENT_FAILURE_STAGE=""
+  FAILURE_CONTEXT_REPORTED=0
+}
+
+report_failure_context() {
+  local rc="${1:-1}"
+
+  if [[ "$rc" -eq 0 || -z "$CURRENT_DEPENDENT" || -z "$CURRENT_FAILURE_CLASS" || "$FAILURE_CONTEXT_REPORTED" -eq 1 ]]; then
+    return 0
+  fi
+
+  printf 'failure classification: dependent=%s class=%s stage=%s\n' \
+    "$CURRENT_DEPENDENT" "$CURRENT_FAILURE_CLASS" "$CURRENT_FAILURE_STAGE" >&2
+  FAILURE_CONTEXT_REPORTED=1
+}
+
+trap 'rc=$?; report_failure_context "$rc"; exit "$rc"' ERR
+
+with_failure_context() {
+  local dependent="$1"
+  local failure_class="$2"
+  local failure_stage="$3"
+  shift 3
+
+  set_failure_context "$dependent" "$failure_class" "$failure_stage"
+  "$@"
+  clear_failure_context
 }
 
 assert_dependents_inventory() {
@@ -391,6 +435,142 @@ raise SystemExit(f"no JSON object found in {path}")
 PY
 }
 
+assert_json_expr_from_log() {
+  local path="$1"
+  local expr="$2"
+
+  extract_first_json_from_log "$path" | jq -e "$expr" >/dev/null
+}
+
+run_librist_runtime_smoke() {
+  local local_rx_pid=0
+  local local_tx_pid=0
+
+  cleanup() {
+    if [[ "$local_rx_pid" != "0" ]]; then
+      kill "$local_rx_pid" 2>/dev/null || true
+      wait "$local_rx_pid" 2>/dev/null || true
+    fi
+    if [[ "$local_tx_pid" != "0" ]]; then
+      kill "$local_tx_pid" 2>/dev/null || true
+      wait "$local_tx_pid" 2>/dev/null || true
+    fi
+  }
+
+  trap cleanup EXIT
+
+  ristreceiver -i rist://127.0.0.1:9200 -o udp://127.0.0.1:9201 -S 100 -v 6 >/tmp/librist-receiver.log 2>&1 &
+  local_rx_pid="$!"
+  ristsender -i udp://127.0.0.1:9202 -o rist://127.0.0.1:9200 -S 100 -v 6 >/tmp/librist-sender.log 2>&1 &
+  local_tx_pid="$!"
+
+  sleep 1
+  python3 - <<'PY'
+import socket
+import time
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+for index in range(200):
+    sock.sendto(f"packet-{index:03d}".encode("ascii"), ("127.0.0.1", 9202))
+    time.sleep(0.005)
+PY
+  sleep 2
+  cleanup
+  trap - EXIT
+}
+
+run_mosquitto_runtime_smoke() {
+  local broker_pid=0
+  local sub_pid=0
+
+  cleanup() {
+    if [[ "$sub_pid" != "0" ]]; then
+      kill "$sub_pid" 2>/dev/null || true
+      wait "$sub_pid" 2>/dev/null || true
+    fi
+    if [[ "$broker_pid" != "0" ]]; then
+      kill "$broker_pid" 2>/dev/null || true
+      wait "$broker_pid" 2>/dev/null || true
+    fi
+  }
+
+  trap cleanup EXIT
+
+  cat > /tmp/mosquitto.conf <<'EOF'
+listener 18883 127.0.0.1
+allow_anonymous false
+user root
+plugin /usr/lib/x86_64-linux-gnu/mosquitto_dynamic_security.so
+plugin_opt_config_file /tmp/mosquitto-dynsec.json
+EOF
+
+  mosquitto_ctrl dynsec init /tmp/mosquitto-dynsec.json admin secret >/tmp/mosquitto-dynsec-init.log
+  chmod 0666 /tmp/mosquitto-dynsec.json
+  mosquitto -c /tmp/mosquitto.conf >/tmp/mosquitto.log 2>&1 &
+  broker_pid="$!"
+
+  for _ in $(seq 1 100); do
+    nc -z 127.0.0.1 18883 && break
+    sleep 0.1
+  done
+
+  mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec createClient app -p apppass >/tmp/mosquitto-dynsec-client.log
+  mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec createRole pubsub >/tmp/mosquitto-dynsec-role.log
+  mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub publishClientSend smoke/json allow >/tmp/mosquitto-dynsec-acl-send.log
+  mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub publishClientReceive smoke/json allow >/tmp/mosquitto-dynsec-acl-recv.log
+  mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub subscribeLiteral smoke/json allow >/tmp/mosquitto-dynsec-acl-sub.log
+  mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addClientRole app pubsub >/tmp/mosquitto-dynsec-client-role.log
+
+  mosquitto_sub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -F '%j' -C 1 >/tmp/mosquitto-sub.json &
+  sub_pid="$!"
+  sleep 0.5
+  mosquitto_pub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -m 'hello'
+  wait "$sub_pid"
+  sub_pid=0
+  sleep 0.5
+
+  kill "$broker_pid"
+  wait "$broker_pid" || true
+  broker_pid=0
+
+  mosquitto -c /tmp/mosquitto.conf >/tmp/mosquitto-restart.log 2>&1 &
+  broker_pid="$!"
+  for _ in $(seq 1 100); do
+    nc -z 127.0.0.1 18883 && break
+    sleep 0.1
+  done
+
+  mosquitto_sub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -C 1 >/tmp/mosquitto-sub-restart.out &
+  sub_pid="$!"
+  sleep 0.5
+  mosquitto_pub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -m 'persisted'
+  wait "$sub_pid"
+  sub_pid=0
+  cleanup
+  trap - EXIT
+}
+
+run_pgagroal_runtime_smoke() {
+  cleanup() {
+    kill "$(cat /home/tester/pgagroal/server.pid)" 2>/dev/null || true
+  }
+
+  runuser -u tester -- bash -lc \
+    "pgagroal -c /home/tester/pgagroal/pgagroal.conf -a /home/tester/pgagroal/pgagroal_hba.conf >/home/tester/pgagroal/server.log 2>&1 & echo \$! >/home/tester/pgagroal/server.pid"
+  trap cleanup EXIT
+
+  for _ in $(seq 1 100); do
+    [[ -S /home/tester/pgagroal/run/.s.pgagroal.2345 ]] && break
+    sleep 0.1
+  done
+
+  runuser -u tester -- pgagroal-cli -c /home/tester/pgagroal/pgagroal.conf ping -F json >/tmp/pgagroal-ping.json
+  runuser -u tester -- pgagroal-cli -c /home/tester/pgagroal/pgagroal.conf status -F json >/tmp/pgagroal-status.json
+  runuser -u tester -- pgagroal-cli -c /home/tester/pgagroal/pgagroal.conf conf ls -F json >/tmp/pgagroal-conf-ls.json
+  cleanup
+  trap - EXIT
+}
+
 test_freerdp3() {
   local src=""
   local build_dir="/tmp/build-freerdp3"
@@ -399,12 +579,14 @@ test_freerdp3() {
 
   should_run freerdp3 || return 0
 
-  install_build_deps freerdp3
+  with_failure_context freerdp3 package-install "installing build dependencies" install_build_deps freerdp3
+  set_failure_context freerdp3 package-install "fetching source package"
   src="$(fetch_source freerdp3)"
+  clear_failure_context
 
   log "freerdp3: building AAD core and SDL client"
   rm -rf "$build_dir"
-  run_logged /tmp/freerdp3-configure.log \
+  with_failure_context freerdp3 compile-time "configuring CMake build" run_logged /tmp/freerdp3-configure.log \
     cmake -S "$src" -B "$build_dir" -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_TESTING=OFF \
@@ -420,50 +602,35 @@ test_freerdp3() {
       -DWITH_FUSE=OFF \
       -DWITH_PULSE=OFF \
       -DWITH_ALSA=OFF
-  run_logged /tmp/freerdp3-build.log cmake --build "$build_dir" --target freerdp sfreerdp
+  with_failure_context freerdp3 compile-time "building freerdp and sfreerdp" \
+    run_logged /tmp/freerdp3-build.log cmake --build "$build_dir" --target freerdp sfreerdp
 
   sfreerdp_bin="$(find "$build_dir" -path '*/sfreerdp' -type f | head -n1)"
   [[ -n "$sfreerdp_bin" ]] || die "freerdp3 SDL client was not built"
   lib_path="$(find "$build_dir/libfreerdp" -maxdepth 1 -name 'libfreerdp3.so*' | head -n1)"
   [[ -n "$lib_path" ]] || die "freerdp3 core library was not built"
-  assert_links_to_packaged_safe "$sfreerdp_bin"
-  assert_links_to_packaged_safe "$lib_path"
+  with_failure_context freerdp3 link-time "verifying SDL client linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$sfreerdp_bin"
+  with_failure_context freerdp3 link-time "verifying libfreerdp linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$lib_path"
 }
 
 test_librist() {
   should_run librist || return 0
 
   log "librist: exercising sender statistics JSON output through rist-tools"
-  install_packages rist-tools
-  assert_links_to_packaged_safe "$(command -v ristreceiver)"
+  with_failure_context librist package-install "installing rist-tools package" install_packages rist-tools
+  with_failure_context librist link-time "verifying ristreceiver linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$(command -v ristreceiver)"
 
-  (
-    set -euo pipefail
-    ristreceiver -i rist://127.0.0.1:9200 -o udp://127.0.0.1:9201 -S 100 -v 6 >/tmp/librist-receiver.log 2>&1 &
-    local_rx_pid="$!"
-    ristsender -i udp://127.0.0.1:9202 -o rist://127.0.0.1:9200 -S 100 -v 6 >/tmp/librist-sender.log 2>&1 &
-    local_tx_pid="$!"
-    trap 'kill "$local_rx_pid" "$local_tx_pid" 2>/dev/null || true; wait "$local_rx_pid" 2>/dev/null || true; wait "$local_tx_pid" 2>/dev/null || true' EXIT
+  with_failure_context librist runtime-semantic "running sender/receiver stats JSON smoke" \
+    run_librist_runtime_smoke
 
-    sleep 1
-    python3 - <<'PY'
-import socket
-import time
+  with_failure_context librist runtime-semantic "checking sender stats JSON marker" \
+    grep -F '"sender-stats"' /tmp/librist-sender.log >/dev/null
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-for index in range(200):
-    sock.sendto(f"packet-{index:03d}".encode("ascii"), ("127.0.0.1", 9202))
-    time.sleep(0.005)
-PY
-    sleep 2
-  )
-
-  grep -F '"sender-stats"' /tmp/librist-sender.log >/dev/null || {
-    cat /tmp/librist-sender.log >&2
-    die "librist sender statistics JSON was not emitted"
-  }
-
-  extract_first_json_from_log /tmp/librist-sender.log | jq -e '."sender-stats".peer.stats.sent >= 1' >/dev/null
+  with_failure_context librist runtime-semantic "validating sender stats JSON payload" \
+    assert_json_expr_from_log /tmp/librist-sender.log '."sender-stats".peer.stats.sent >= 1'
 }
 
 test_monado() {
@@ -476,8 +643,10 @@ test_monado() {
 
   should_run monado || return 0
 
-  install_build_deps monado
+  with_failure_context monado package-install "installing build dependencies" install_build_deps monado
+  set_failure_context monado package-install "fetching source package"
   src="$(fetch_source monado)"
+  clear_failure_context
 
   log "monado: building runtime binaries and exercising Vive/config/calibration/GUI JSON handling"
   cat > "$src/tests/tests_monado_runtime_json.cpp" <<'EOF'
@@ -675,7 +844,7 @@ add_executable(monado_json_smoke tests_monado_runtime_json.cpp)
 target_link_libraries(monado_json_smoke PRIVATE aux_vive aux_tracking aux_util)
 EOF
   rm -rf "$build_dir"
-  run_logged /tmp/monado-configure.log \
+  with_failure_context monado compile-time "configuring CMake build" run_logged /tmp/monado-configure.log \
     cmake -S "$src" -B "$build_dir" -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_TESTING=ON \
@@ -704,19 +873,27 @@ EOF
       -DXRT_BUILD_DRIVER_ULV2=OFF \
       -DXRT_BUILD_DRIVER_VF=OFF \
       -DXRT_BUILD_DRIVER_WMR=OFF
-  run_logged /tmp/monado-build.log \
+  with_failure_context monado compile-time "building runtime targets and JSON smoke" run_logged /tmp/monado-build.log \
     cmake --build "$build_dir" --target monado_json_smoke monado-cli monado-gui monado-service
 
+  set_failure_context monado compile-time "checking built runtime artifacts"
   test -x "$runtime_smoke" || die "monado runtime JSON smoke binary was not built"
   test -x "$cli_bin" || die "monado-cli was not built"
   test -x "$gui_bin" || die "monado-gui was not built"
   test -x "$service_bin" || die "monado-service was not built"
-  assert_links_to_packaged_safe "$runtime_smoke"
-  assert_links_to_packaged_safe "$cli_bin"
-  assert_links_to_packaged_safe "$gui_bin"
-  assert_links_to_packaged_safe "$service_bin"
-  run_logged /tmp/monado-runtime-smoke.log "$runtime_smoke"
-  grep -Fx 'monado-json-ok' /tmp/monado-runtime-smoke.log >/dev/null
+  clear_failure_context
+  with_failure_context monado link-time "verifying monado JSON smoke linkage" \
+    assert_links_to_packaged_safe "$runtime_smoke"
+  with_failure_context monado link-time "verifying monado-cli linkage" \
+    assert_links_to_packaged_safe "$cli_bin"
+  with_failure_context monado link-time "verifying monado-gui linkage" \
+    assert_links_to_packaged_safe "$gui_bin"
+  with_failure_context monado link-time "verifying monado-service linkage" \
+    assert_links_to_packaged_safe "$service_bin"
+  with_failure_context monado runtime-semantic "running monado JSON smoke" \
+    run_logged /tmp/monado-runtime-smoke.log "$runtime_smoke"
+  with_failure_context monado runtime-semantic "checking monado JSON smoke sentinel" \
+    grep -Fx 'monado-json-ok' /tmp/monado-runtime-smoke.log >/dev/null
 }
 
 test_mosquitto() {
@@ -725,74 +902,23 @@ test_mosquitto() {
   should_run mosquitto || return 0
 
   log "mosquitto: exercising dynamic-security JSON persistence and mosquitto_sub JSON formatting"
-  install_packages mosquitto mosquitto-clients
-  assert_links_to_packaged_safe "$(command -v mosquitto_sub)"
+  with_failure_context mosquitto package-install "installing mosquitto packages" \
+    install_packages mosquitto mosquitto-clients
+  with_failure_context mosquitto link-time "verifying mosquitto_sub linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$(command -v mosquitto_sub)"
+  set_failure_context mosquitto package-install "checking dynamic-security plugin installation"
   test -f "$dynsec_plugin" || die "mosquitto dynamic-security plugin was not installed"
-  assert_links_to_packaged_safe "$dynsec_plugin"
+  clear_failure_context
+  with_failure_context mosquitto link-time "verifying dynamic-security plugin linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$dynsec_plugin"
 
-  (
-    set -euo pipefail
-    broker_pid=0
-    cleanup() {
-      if [[ "$broker_pid" != "0" ]]; then
-        kill "$broker_pid" 2>/dev/null || true
-        wait "$broker_pid" 2>/dev/null || true
-      fi
-    }
-    trap cleanup EXIT
+  with_failure_context mosquitto runtime-semantic "running broker persistence and JSON formatting smoke" \
+    run_mosquitto_runtime_smoke
 
-    cat > /tmp/mosquitto.conf <<'EOF'
-listener 18883 127.0.0.1
-allow_anonymous false
-user root
-plugin /usr/lib/x86_64-linux-gnu/mosquitto_dynamic_security.so
-plugin_opt_config_file /tmp/mosquitto-dynsec.json
-EOF
-
-    mosquitto_ctrl dynsec init /tmp/mosquitto-dynsec.json admin secret >/tmp/mosquitto-dynsec-init.log
-    chmod 0666 /tmp/mosquitto-dynsec.json
-    mosquitto -c /tmp/mosquitto.conf >/tmp/mosquitto.log 2>&1 &
-    broker_pid="$!"
-
-    for _ in $(seq 1 100); do
-      nc -z 127.0.0.1 18883 && break
-      sleep 0.1
-    done
-
-    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec createClient app -p apppass >/tmp/mosquitto-dynsec-client.log
-    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec createRole pubsub >/tmp/mosquitto-dynsec-role.log
-    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub publishClientSend smoke/json allow >/tmp/mosquitto-dynsec-acl-send.log
-    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub publishClientReceive smoke/json allow >/tmp/mosquitto-dynsec-acl-recv.log
-    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub subscribeLiteral smoke/json allow >/tmp/mosquitto-dynsec-acl-sub.log
-    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addClientRole app pubsub >/tmp/mosquitto-dynsec-client-role.log
-
-    mosquitto_sub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -F '%j' -C 1 >/tmp/mosquitto-sub.json &
-    sub_pid="$!"
-    sleep 0.5
-    mosquitto_pub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -m 'hello'
-    wait "$sub_pid"
-    sleep 0.5
-
-    kill "$broker_pid"
-    wait "$broker_pid" || true
-    broker_pid=0
-
-    mosquitto -c /tmp/mosquitto.conf >/tmp/mosquitto-restart.log 2>&1 &
-    broker_pid="$!"
-    for _ in $(seq 1 100); do
-      nc -z 127.0.0.1 18883 && break
-      sleep 0.1
-    done
-
-    mosquitto_sub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -C 1 >/tmp/mosquitto-sub-restart.out &
-    sub_pid="$!"
-    sleep 0.5
-    mosquitto_pub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -m 'persisted'
-    wait "$sub_pid"
-  )
-
-  jq -e '.topic == "smoke/json" and .payload == "hello" and .payloadlen == 5' /tmp/mosquitto-sub.json >/dev/null
-  grep -Fx 'persisted' /tmp/mosquitto-sub-restart.out >/dev/null
+  with_failure_context mosquitto runtime-semantic "validating mosquitto_sub JSON payload" \
+    jq -e '.topic == "smoke/json" and .payload == "hello" and .payloadlen == 5' /tmp/mosquitto-sub.json >/dev/null
+  with_failure_context mosquitto runtime-semantic "checking restarted broker persistence output" \
+    grep -Fx 'persisted' /tmp/mosquitto-sub-restart.out >/dev/null
 }
 
 test_ocp() {
@@ -802,11 +928,13 @@ test_ocp() {
 
   should_run ocp || return 0
 
-  install_build_deps ocp
+  with_failure_context ocp package-install "installing build dependencies" install_build_deps ocp
+  set_failure_context ocp package-install "fetching source package"
   src="$(fetch_source ocp)"
+  clear_failure_context
 
   log "ocp: building ncurses variant from source"
-  run_bash_logged /tmp/ocp-configure.log "
+  with_failure_context ocp compile-time "configuring ncurses build" run_bash_logged /tmp/ocp-configure.log "
     cd '$src'
     ./configure \
       --prefix=/usr \
@@ -824,14 +952,18 @@ test_ocp() {
       --without-update-mime-database \
       --without-update-desktop-database
   "
-  run_bash_logged /tmp/ocp-build.log "cd '$src' && make -j'$(nproc)'"
+  with_failure_context ocp compile-time "building ncurses variant" \
+    run_bash_logged /tmp/ocp-build.log "cd '$src' && make -j'$(nproc)'"
 
   lib_path="$src/libocp.so"
+  set_failure_context ocp compile-time "checking libocp build output"
   test -f "$lib_path" || die "ocp build did not produce libocp.so"
-  assert_links_to_packaged_safe "$lib_path"
+  clear_failure_context
+  with_failure_context ocp link-time "verifying libocp linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$lib_path"
 
   log "ocp: exercising cached MusicBrainz JSON parsing through musicbrainz.c"
-  run_bash_logged /tmp/ocp-musicbrainz-build.log "
+  with_failure_context ocp compile-time "building MusicBrainz JSON smoke" run_bash_logged /tmp/ocp-musicbrainz-build.log "
     cd '$src'
     cat > /tmp/ocp-musicbrainz-smoke.c <<'EOF'
 #include <stdint.h>
@@ -937,11 +1069,16 @@ EOF
       /tmp/ocp-musicbrainz-smoke.c \
       \$(pkg-config --libs libcjson) -Wl,--gc-sections -o /tmp/ocp-musicbrainz-smoke
   "
-  assert_links_to_packaged_safe /tmp/ocp-musicbrainz-smoke
-  run_logged /tmp/ocp-musicbrainz.log /tmp/ocp-musicbrainz-smoke
-  grep -Fx 'Test Album' /tmp/ocp-musicbrainz.log >/dev/null
-  grep -Fx 'First Track' /tmp/ocp-musicbrainz.log >/dev/null
-  grep -Fx 'Track Artist feat. Guest' /tmp/ocp-musicbrainz.log >/dev/null
+  with_failure_context ocp link-time "verifying MusicBrainz smoke linkage" \
+    assert_links_to_packaged_safe /tmp/ocp-musicbrainz-smoke
+  with_failure_context ocp runtime-semantic "running MusicBrainz JSON smoke" \
+    run_logged /tmp/ocp-musicbrainz.log /tmp/ocp-musicbrainz-smoke
+  with_failure_context ocp runtime-semantic "checking parsed album title" \
+    grep -Fx 'Test Album' /tmp/ocp-musicbrainz.log >/dev/null
+  with_failure_context ocp runtime-semantic "checking parsed track title" \
+    grep -Fx 'First Track' /tmp/ocp-musicbrainz.log >/dev/null
+  with_failure_context ocp runtime-semantic "checking parsed artist joinphrase" \
+    grep -Fx 'Track Artist feat. Guest' /tmp/ocp-musicbrainz.log >/dev/null
 
   if [[ -x "$src/ocp-curses" ]]; then
     binary="$src/ocp-curses"
@@ -950,8 +1087,10 @@ EOF
   else
     die "ocp build did not produce an executable"
   fi
+  set_failure_context ocp runtime-semantic "capturing help output"
   timeout 10 "$binary" --help >/tmp/ocp-help.log 2>&1 || true
   test -s /tmp/ocp-help.log || die "ocp help output was empty"
+  clear_failure_context
 }
 
 test_oidc_agent() {
@@ -961,16 +1100,21 @@ test_oidc_agent() {
 
   should_run oidc-agent || return 0
 
-  install_build_deps oidc-agent
+  with_failure_context oidc-agent package-install "installing build dependencies" install_build_deps oidc-agent
+  set_failure_context oidc-agent package-install "fetching source package"
   src="$(fetch_source oidc-agent)"
+  clear_failure_context
 
   log "oidc-agent: building with shared libcjson and exercising device-code/account/config-updater JSON paths"
-  run_bash_logged /tmp/oidc-agent-build.log \
+  with_failure_context oidc-agent compile-time "building oidc-agent with shared libcjson" run_bash_logged /tmp/oidc-agent-build.log \
     "cd '$src' && make USE_CJSON_SO=1 create_obj_dir_structure build"
 
   agent_bin="$src/bin/oidc-agent"
+  set_failure_context oidc-agent compile-time "checking oidc-agent build output"
   test -x "$agent_bin" || die "oidc-agent binary was not built"
-  assert_links_to_packaged_safe "$agent_bin"
+  clear_failure_context
+  with_failure_context oidc-agent link-time "verifying oidc-agent linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$agent_bin"
 
   cat > /tmp/oidc-json-smoke.c <<'EOF'
 #include <stdarg.h>
@@ -1131,7 +1275,7 @@ int main(void) {
   return 0;
 }
 EOF
-  run_bash_logged /tmp/oidc-agent-runtime-smoke-build.log "
+  with_failure_context oidc-agent compile-time "building oidc-agent JSON smoke" run_bash_logged /tmp/oidc-agent-runtime-smoke-build.log "
     cc -std=c99 -ffunction-sections -fdata-sections -DUSE_CJSON_SO \
       -I'$src/src' -I'$src/lib' \$(pkg-config --cflags libcjson) \
       /tmp/oidc-json-smoke.c \
@@ -1152,18 +1296,22 @@ EOF
       \$(pkg-config --libs libcjson) -Wl,--gc-sections -o '$runtime_smoke'
   "
 
-  assert_links_to_packaged_safe "$runtime_smoke"
-  run_logged /tmp/oidc-agent-runtime-smoke.log "$runtime_smoke"
-  grep -Fx 'oidc-json-ok' /tmp/oidc-agent-runtime-smoke.log >/dev/null
+  with_failure_context oidc-agent link-time "verifying oidc-agent JSON smoke linkage" \
+    assert_links_to_packaged_safe "$runtime_smoke"
+  with_failure_context oidc-agent runtime-semantic "running oidc-agent JSON smoke" \
+    run_logged /tmp/oidc-agent-runtime-smoke.log "$runtime_smoke"
+  with_failure_context oidc-agent runtime-semantic "checking oidc-agent JSON smoke sentinel" \
+    grep -Fx 'oidc-json-ok' /tmp/oidc-agent-runtime-smoke.log >/dev/null
 }
 
 test_pgagroal() {
   should_run pgagroal || return 0
 
   log "pgagroal: exercising JSON management commands"
-  install_packages pgagroal
+  with_failure_context pgagroal package-install "installing pgagroal package" install_packages pgagroal
   prepare_tester_user
-  assert_links_to_packaged_safe "$(command -v pgagroal-cli)"
+  with_failure_context pgagroal link-time "verifying pgagroal-cli linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$(command -v pgagroal-cli)"
 
   mkdir -p /home/tester/pgagroal/run
   chown -R tester:tester /home/tester/pgagroal
@@ -1189,25 +1337,15 @@ host all all all all
 EOF
   chown tester:tester /home/tester/pgagroal/pgagroal.conf /home/tester/pgagroal/pgagroal_hba.conf
 
-  (
-    set -euo pipefail
-    runuser -u tester -- bash -lc \
-      "pgagroal -c /home/tester/pgagroal/pgagroal.conf -a /home/tester/pgagroal/pgagroal_hba.conf >/home/tester/pgagroal/server.log 2>&1 & echo \$! >/home/tester/pgagroal/server.pid"
-    trap 'kill "$(cat /home/tester/pgagroal/server.pid)" 2>/dev/null || true' EXIT
+  with_failure_context pgagroal runtime-semantic "running pgagroal management JSON smoke" \
+    run_pgagroal_runtime_smoke
 
-    for _ in $(seq 1 100); do
-      [[ -S /home/tester/pgagroal/run/.s.pgagroal.2345 ]] && break
-      sleep 0.1
-    done
-
-    runuser -u tester -- pgagroal-cli -c /home/tester/pgagroal/pgagroal.conf ping -F json >/tmp/pgagroal-ping.json
-    runuser -u tester -- pgagroal-cli -c /home/tester/pgagroal/pgagroal.conf status -F json >/tmp/pgagroal-status.json
-    runuser -u tester -- pgagroal-cli -c /home/tester/pgagroal/pgagroal.conf conf ls -F json >/tmp/pgagroal-conf-ls.json
-  )
-
-  jq -e '.command.name == "ping" and .command.output.message == "running"' /tmp/pgagroal-ping.json >/dev/null
-  jq -e '.command.name == "status" and .command.output.connections.max == 10' /tmp/pgagroal-status.json >/dev/null
-  jq -e '.command.name == "conf ls" and (.command.output.files.list | length) >= 2' /tmp/pgagroal-conf-ls.json >/dev/null
+  with_failure_context pgagroal runtime-semantic "validating ping JSON response" \
+    jq -e '.command.name == "ping" and .command.output.message == "running"' /tmp/pgagroal-ping.json >/dev/null
+  with_failure_context pgagroal runtime-semantic "validating status JSON response" \
+    jq -e '.command.name == "status" and .command.output.connections.max == 10' /tmp/pgagroal-status.json >/dev/null
+  with_failure_context pgagroal runtime-semantic "validating conf ls JSON response" \
+    jq -e '.command.name == "conf ls" and (.command.output.files.list | length) >= 2' /tmp/pgagroal-conf-ls.json >/dev/null
 }
 
 test_qad() {
@@ -1216,20 +1354,29 @@ test_qad() {
 
   should_run qad || return 0
 
-  install_build_deps qad
+  with_failure_context qad package-install "installing build dependencies" install_build_deps qad
+  set_failure_context qad package-install "fetching source package"
   src="$(fetch_source qad)"
+  clear_failure_context
 
   log "qad: building the HTTP/JSON daemon and exercising REST JSON request parsing"
   rm -rf "$build_dir"
-  run_logged /tmp/qad-setup.log meson setup "$build_dir" "$src" -Dbackend-ilm=false
-  run_logged /tmp/qad-build.log meson compile -C "$build_dir"
+  with_failure_context qad compile-time "configuring Meson build" \
+    run_logged /tmp/qad-setup.log meson setup "$build_dir" "$src" -Dbackend-ilm=false
+  with_failure_context qad compile-time "building qad daemon" \
+    run_logged /tmp/qad-build.log meson compile -C "$build_dir"
 
+  set_failure_context qad compile-time "checking qad build output"
   test -x "$build_dir/qad" || die "qad binary was not built"
-  assert_links_to_packaged_safe "$build_dir/qad"
-  run_logged /tmp/qad-help.log "$build_dir/qad" --help
-  grep -F -- '--port' /tmp/qad-help.log >/dev/null
+  clear_failure_context
+  with_failure_context qad link-time "verifying qad linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$build_dir/qad"
+  with_failure_context qad runtime-semantic "capturing qad help output" \
+    run_logged /tmp/qad-help.log "$build_dir/qad" --help
+  with_failure_context qad runtime-semantic "checking qad help output" \
+    grep -F -- '--port' /tmp/qad-help.log >/dev/null
 
-  run_bash_logged /tmp/qad-json-smoke-build.log "
+  with_failure_context qad compile-time "building qad JSON smoke" run_bash_logged /tmp/qad-json-smoke-build.log "
     cat > /tmp/qad-json-smoke.c <<'EOF'
 #include <stdio.h>
 #include <string.h>
@@ -1345,9 +1492,12 @@ EOF
     cc -Dmain=qad_server_main -I'$src/include' -I'$src/src' -I'$build_dir' -c '$src/src/server.c' -o /tmp/qad-server.o
     cc -I'$src/include' -I'$src/src' -I'$build_dir' /tmp/qad-json-smoke.c /tmp/qad-server.o -lmicrohttpd -lcjson -o /tmp/qad-json-smoke
   "
-  assert_links_to_packaged_safe /tmp/qad-json-smoke
-  run_logged /tmp/qad-json-smoke.log /tmp/qad-json-smoke
-  grep -Fx 'qad-json-ok' /tmp/qad-json-smoke.log >/dev/null
+  with_failure_context qad link-time "verifying qad JSON smoke linkage" \
+    assert_links_to_packaged_safe /tmp/qad-json-smoke
+  with_failure_context qad runtime-semantic "running qad JSON smoke" \
+    run_logged /tmp/qad-json-smoke.log /tmp/qad-json-smoke
+  with_failure_context qad runtime-semantic "checking qad JSON smoke sentinel" \
+    grep -Fx 'qad-json-ok' /tmp/qad-json-smoke.log >/dev/null
 }
 
 test_snibbetracker() {
@@ -1356,11 +1506,13 @@ test_snibbetracker() {
 
   should_run snibbetracker || return 0
 
-  install_build_deps snibbetracker
+  with_failure_context snibbetracker package-install "installing build dependencies" install_build_deps snibbetracker
+  set_failure_context snibbetracker package-install "fetching source package"
   src="$(fetch_source snibbetracker)"
+  clear_failure_context
 
   log "snibbetracker: building binary and JSON save/load smoke test"
-  run_bash_logged /tmp/snibbetracker-build.log "
+  with_failure_context snibbetracker compile-time "building snibbetracker and JSON smoke" run_bash_logged /tmp/snibbetracker-build.log "
     cd '$src'
     cp debian/Makefile snibbetracker/src/Makefile
     make -C snibbetracker/src -j'$(nproc)'
@@ -1424,12 +1576,18 @@ EOF
   "
 
   binary="$src/snibbetracker/src/snibbetracker"
+  set_failure_context snibbetracker compile-time "checking snibbetracker build output"
   test -x "$binary" || die "snibbetracker binary was not built"
-  assert_links_to_packaged_safe "$binary"
-  assert_links_to_packaged_safe /tmp/snibbetracker-smoke
-  run_logged /tmp/snibbetracker-smoke.json /tmp/snibbetracker-smoke
-  jq -e '.file_version == 4 and (.patterns | type == "array") and (.nodes | type == "array")' \
-    /tmp/snibbetracker-smoke.json >/dev/null
+  clear_failure_context
+  with_failure_context snibbetracker link-time "verifying snibbetracker linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$binary"
+  with_failure_context snibbetracker link-time "verifying snibbetracker JSON smoke linkage" \
+    assert_links_to_packaged_safe /tmp/snibbetracker-smoke
+  with_failure_context snibbetracker runtime-semantic "running snibbetracker JSON smoke" \
+    run_logged /tmp/snibbetracker-smoke.json /tmp/snibbetracker-smoke
+  with_failure_context snibbetracker runtime-semantic "validating snibbetracker project JSON" \
+    jq -e '.file_version == 4 and (.patterns | type == "array") and (.nodes | type == "array")' \
+      /tmp/snibbetracker-smoke.json >/dev/null
 }
 
 test_opm_common() {
@@ -1439,10 +1597,12 @@ test_opm_common() {
 
   should_run opm-common || return 0
 
+  set_failure_context opm-common package-install "fetching source package"
   src="$(fetch_source opm-common)"
+  clear_failure_context
 
   log "opm-common: building a JsonObject smoke with upstream Findcjson.cmake and exercising parse/dump paths"
-  run_bash_logged /tmp/opm-common-build.log "
+  with_failure_context opm-common compile-time "building JsonObject smoke with Findcjson.cmake" run_bash_logged /tmp/opm-common-build.log "
     set -euo pipefail
     rm -rf '$smoke_dir'
     OPM_COMMON_SRC='$src' python3 - <<'PY'
@@ -1473,13 +1633,18 @@ PY
   "
 
   binary="$(find "$smoke_dir" -maxdepth 5 -type f -name 'opm-common-json-smoke' | head -n1)"
+  set_failure_context opm-common compile-time "checking JsonObject smoke build output"
   if ! test -x "$binary"; then
     cat /tmp/opm-common-build.log >&2
     die "opm-common JsonObject smoke binary was not built"
   fi
-  assert_links_to_packaged_safe "$binary"
-  run_logged /tmp/opm-common-json.log "$binary" "$src/tests/json/example1.json"
-  grep -Fx 'opm-common-json-ok' /tmp/opm-common-json.log >/dev/null
+  clear_failure_context
+  with_failure_context opm-common link-time "verifying JsonObject smoke linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$binary"
+  with_failure_context opm-common runtime-semantic "running JsonObject round-trip smoke" \
+    run_logged /tmp/opm-common-json.log "$binary" "$src/tests/json/example1.json"
+  with_failure_context opm-common runtime-semantic "checking JsonObject smoke sentinel" \
+    grep -Fx 'opm-common-json-ok' /tmp/opm-common-json.log >/dev/null
 }
 
 test_iperf3() {
@@ -1489,11 +1654,13 @@ test_iperf3() {
 
   should_run iperf3 || return 0
 
-  install_build_deps iperf3
+  with_failure_context iperf3 package-install "installing build dependencies" install_build_deps iperf3
+  set_failure_context iperf3 package-install "fetching source package"
   src="$(fetch_source iperf3)"
+  clear_failure_context
 
   log "iperf3: rebuilding libiperf against packaged libcjson and exercising the JSON helper routines"
-  run_bash_logged /tmp/iperf3-build.log "
+  with_failure_context iperf3 compile-time "rebuilding libiperf against packaged libcjson" run_bash_logged /tmp/iperf3-build.log "
     cd '$src'
     python3 - <<'PY'
 from pathlib import Path
@@ -1518,11 +1685,14 @@ PY
 
   binary="$src/src/.libs/iperf3"
   lib_path="$(find "$src/src/.libs" -maxdepth 1 -type f -name 'libiperf.so*' | head -n1)"
+  set_failure_context iperf3 compile-time "checking iperf3 build outputs"
   test -x "$binary" || die "iperf3 binary was not built"
   [[ -n "$lib_path" ]] || die "iperf3 shared library was not built"
-  run_bash_logged /tmp/iperf3-link-resolution.log "
+  clear_failure_context
+  with_failure_context iperf3 link-time "capturing iperf3 link resolution" run_bash_logged /tmp/iperf3-link-resolution.log "
     LD_LIBRARY_PATH='$src/src/.libs' ldd '$binary'
   "
+  set_failure_context iperf3 link-time "verifying iperf3 link resolution"
   grep -E 'libiperf\.so\.0 => .*/src/\.libs/libiperf\.so\.0' /tmp/iperf3-link-resolution.log >/dev/null || {
     cat /tmp/iperf3-link-resolution.log >&2
     return 1
@@ -1531,9 +1701,11 @@ PY
     cat /tmp/iperf3-link-resolution.log >&2
     return 1
   }
-  assert_links_to_packaged_safe "$lib_path"
+  clear_failure_context
+  with_failure_context iperf3 link-time "verifying libiperf linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$lib_path"
 
-  run_bash_logged /tmp/iperf3-json-smoke-build.log "
+  with_failure_context iperf3 compile-time "building iperf3 JSON smoke" run_bash_logged /tmp/iperf3-json-smoke-build.log "
     set -euo pipefail
     python3 - <<'PY'
 import base64
@@ -1552,17 +1724,20 @@ PY
       -lcjson \
       -o /tmp/iperf3-json-smoke
   "
-  assert_links_to_packaged_safe /tmp/iperf3-json-smoke
-  run_bash_logged /tmp/iperf3-runtime.log "
+  with_failure_context iperf3 link-time "verifying iperf3 JSON smoke linkage" \
+    assert_links_to_packaged_safe /tmp/iperf3-json-smoke
+  with_failure_context iperf3 runtime-semantic "running iperf3 JSON smoke" run_bash_logged /tmp/iperf3-runtime.log "
     export LD_LIBRARY_PATH='$src/src/.libs'
     /tmp/iperf3-json-smoke >/tmp/iperf3-client.json
   "
 
+  set_failure_context iperf3 runtime-semantic "validating iperf3 JSON payload"
   jq -e '.role == "client" and .streams == 4 and .reverse == true and .rate == 12.5' \
     /tmp/iperf3-client.json >/dev/null || {
       cat /tmp/iperf3-client.json >&2
       return 1
     }
+  clear_failure_context
 }
 
 test_epic5() {
@@ -1571,11 +1746,13 @@ test_epic5() {
 
   should_run epic5 || return 0
 
-  install_build_deps epic5
+  with_failure_context epic5 package-install "installing build dependencies" install_build_deps epic5
+  set_failure_context epic5 package-install "fetching source package"
   src="$(fetch_source epic5)"
+  clear_failure_context
 
   log "epic5: rebuilding scripted JSON functions against packaged libcjson and exercising JSON_EXPLODE/JSON_IMPLODE"
-  run_bash_logged /tmp/epic5-build.log "
+  with_failure_context epic5 compile-time "rebuilding scripted JSON functions against packaged libcjson" run_bash_logged /tmp/epic5-build.log "
     cd '$src'
     python3 - <<'PY'
 from pathlib import Path
@@ -1598,10 +1775,13 @@ PY
   "
 
   binary="$src/source/epic5"
+  set_failure_context epic5 compile-time "checking epic5 build output"
   test -x "$binary" || die "epic5 binary was not built"
-  assert_links_to_packaged_safe "$binary"
+  clear_failure_context
+  with_failure_context epic5 link-time "verifying epic5 linkage to packaged libcjson" \
+    assert_links_to_packaged_safe "$binary"
 
-  run_bash_logged /tmp/epic5-runtime-driver.log "
+  with_failure_context epic5 runtime-semantic "running JSON_EXPLODE/JSON_IMPLODE regression driver" run_bash_logged /tmp/epic5-runtime-driver.log "
     set +e
     timeout 30 '$binary' -d -B -s -n smoke -l /tmp/epic5-json-smoke > /tmp/epic5-runtime.log 2>&1
     status=\$?
@@ -1612,6 +1792,7 @@ PY
     fi
   "
 
+  set_failure_context epic5 runtime-semantic "checking JSON_EXPLODE/JSON_IMPLODE results"
   grep -F 'epic5-json-ok:0' /tmp/epic5-runtime.log >/dev/null || {
     cat /tmp/epic5-runtime.log >&2
     return 1
@@ -1620,6 +1801,7 @@ PY
     cat /tmp/epic5-runtime.log >&2
     return 1
   }
+  clear_failure_context
 }
 
 prepare_writable_root
