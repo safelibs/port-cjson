@@ -2,12 +2,27 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-BUILD_DIR=$(mktemp -d)
 INSTALL_DIR=$(mktemp -d)
 CONSUMER_DIR=$(mktemp -d)
+TEMP_BUILD_DIR=""
+
+if [ "$#" -gt 1 ]; then
+    echo "usage: $0 [safe-build-dir]" >&2
+    exit 1
+fi
+
+if [ "$#" -eq 1 ]; then
+    BUILD_DIR=$(cd "$1" && pwd)
+else
+    BUILD_DIR=$(mktemp -d)
+    TEMP_BUILD_DIR="$BUILD_DIR"
+fi
 
 cleanup() {
-    rm -rf "$BUILD_DIR" "$INSTALL_DIR" "$CONSUMER_DIR"
+    if [[ -n "$TEMP_BUILD_DIR" ]]; then
+        rm -rf "$TEMP_BUILD_DIR"
+    fi
+    rm -rf "$INSTALL_DIR" "$CONSUMER_DIR"
 }
 trap cleanup EXIT
 
@@ -42,12 +57,22 @@ actual_symbols() {
     nm -D --defined-only "$1" | awk '{print $3}' | sort
 }
 
-cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
-    -DENABLE_CJSON_UTILS=ON \
-    -DENABLE_CJSON_TEST=OFF \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" >/dev/null
-cmake --build "$BUILD_DIR" >/dev/null
-cmake --install "$BUILD_DIR" >/dev/null
+if [[ -n "$TEMP_BUILD_DIR" ]]; then
+    cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
+        -DENABLE_CJSON_UTILS=ON \
+        -DENABLE_CJSON_TEST=OFF \
+        -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" >/dev/null
+    cmake --build "$BUILD_DIR" >/dev/null
+    EXPECTED_INSTALL_PREFIX="$INSTALL_DIR"
+else
+    expect_file "$BUILD_DIR/CMakeCache.txt"
+    BUILD_SOURCE_DIR=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$BUILD_DIR/CMakeCache.txt" | tail -n1)
+    BUILD_SOURCE_DIR=$(cd "$BUILD_SOURCE_DIR" && pwd)
+    [[ "$BUILD_SOURCE_DIR" == "$ROOT_DIR" ]] || fail "build dir $BUILD_DIR was configured for $BUILD_SOURCE_DIR, expected $ROOT_DIR"
+    EXPECTED_INSTALL_PREFIX=$(sed -n 's/^CMAKE_INSTALL_PREFIX:PATH=//p' "$BUILD_DIR/CMakeCache.txt" | tail -n1)
+fi
+
+cmake --install "$BUILD_DIR" --prefix "$INSTALL_DIR" >/dev/null
 
 CORE_LIB="$INSTALL_DIR/lib/libcjson.so.1.7.17"
 UTILS_LIB="$INSTALL_DIR/lib/libcjson_utils.so.1.7.17"
@@ -82,10 +107,10 @@ diff -u <(expected_symbols core) <(actual_symbols "$CORE_LIB") \
 diff -u <(expected_symbols utils) <(actual_symbols "$UTILS_LIB") \
     || fail "utils export set does not match debian/libcjson1.symbols"
 
-expect_contains "includedir=${INSTALL_DIR}/include" "$CORE_PC"
+expect_contains "includedir=${EXPECTED_INSTALL_PREFIX}/include" "$CORE_PC"
 expect_contains 'Cflags: -I${includedir} -I${includedir}/cjson' "$CORE_PC"
 expect_contains 'Libs: -L${libdir} -lcjson' "$CORE_PC"
-expect_contains "includedir=${INSTALL_DIR}/include" "$UTILS_PC"
+expect_contains "includedir=${EXPECTED_INSTALL_PREFIX}/include" "$UTILS_PC"
 expect_contains 'Cflags: -I${includedir} -I${includedir}/cjson' "$UTILS_PC"
 expect_contains "Requires: libcjson" "$UTILS_PC"
 
