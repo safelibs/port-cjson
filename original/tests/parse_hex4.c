@@ -46,6 +46,76 @@ static cJSON *parse_unicode_escape(const char *digits)
     return item;
 }
 
+static cJSON_bool decode_single_codepoint(const cJSON *item, unsigned int *codepoint)
+{
+    const unsigned char *string = (const unsigned char*)cJSON_GetStringValue(item);
+
+    if ((string == NULL) || (codepoint == NULL))
+    {
+        return false;
+    }
+
+    if (string[0] == '\0')
+    {
+        *codepoint = 0;
+        return true;
+    }
+
+    if ((string[0] & 0x80U) == 0)
+    {
+        *codepoint = string[0];
+        return (string[1] == '\0');
+    }
+
+    if ((string[0] & 0xE0U) == 0xC0U)
+    {
+        if ((string[1] & 0xC0U) != 0x80U)
+        {
+            return false;
+        }
+
+        *codepoint = ((unsigned int)(string[0] & 0x1FU) << 6) | (unsigned int)(string[1] & 0x3FU);
+        return (string[2] == '\0');
+    }
+
+    if ((string[0] & 0xF0U) == 0xE0U)
+    {
+        if (((string[1] & 0xC0U) != 0x80U) || ((string[2] & 0xC0U) != 0x80U))
+        {
+            return false;
+        }
+
+        *codepoint = ((unsigned int)(string[0] & 0x0FU) << 12)
+                   | ((unsigned int)(string[1] & 0x3FU) << 6)
+                   | (unsigned int)(string[2] & 0x3FU);
+        return (string[3] == '\0');
+    }
+
+    if ((string[0] & 0xF8U) == 0xF0U)
+    {
+        if (((string[1] & 0xC0U) != 0x80U) || ((string[2] & 0xC0U) != 0x80U) || ((string[3] & 0xC0U) != 0x80U))
+        {
+            return false;
+        }
+
+        *codepoint = ((unsigned int)(string[0] & 0x07U) << 18)
+                   | ((unsigned int)(string[1] & 0x3FU) << 12)
+                   | ((unsigned int)(string[2] & 0x3FU) << 6)
+                   | (unsigned int)(string[3] & 0x3FU);
+        return (string[4] == '\0');
+    }
+
+    return false;
+}
+
+static void assert_escape_decodes_to(const cJSON *item, unsigned int expected)
+{
+    unsigned int actual = 0;
+
+    TEST_ASSERT_TRUE_MESSAGE(decode_single_codepoint(item, &actual), "Failed to decode parsed UTF-8 back into a code point.");
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(expected, actual, "Unicode escape decoded to the wrong code point.");
+}
+
 static void unicode_escape_parsing_should_accept_all_non_surrogate_combinations(void)
 {
     unsigned int number = 0;
@@ -73,7 +143,8 @@ static void unicode_escape_parsing_should_accept_all_non_surrogate_combinations(
         {
             TEST_ASSERT_NOT_NULL_MESSAGE(lower, "Lowercase unicode escape should parse.");
             TEST_ASSERT_NOT_NULL_MESSAGE(upper, "Uppercase unicode escape should parse.");
-            TEST_ASSERT_EQUAL_STRING_MESSAGE(cJSON_GetStringValue(lower), cJSON_GetStringValue(upper), "Unicode escape parsing changed with hex digit casing.");
+            assert_escape_decodes_to(lower, number);
+            assert_escape_decodes_to(upper, number);
         }
 
         cJSON_Delete(lower);
@@ -101,11 +172,12 @@ static void unicode_escape_parsing_should_accept_mixed_case_hex_digits(void)
         cJSON *item = parse_unicode_escape(variants[i]);
 
         TEST_ASSERT_NOT_NULL(item);
-        TEST_ASSERT_EQUAL_STRING_MESSAGE(cJSON_GetStringValue(reference), cJSON_GetStringValue(item), "Mixed-case unicode escape parsed differently.");
+        assert_escape_decodes_to(item, 0xBEEFU);
 
         cJSON_Delete(item);
     }
 
+    assert_escape_decodes_to(reference, 0xBEEFU);
     cJSON_Delete(reference);
 }
 
