@@ -427,42 +427,85 @@ test_monado() {
 }
 
 test_mosquitto() {
+  local dynsec_plugin="/usr/lib/x86_64-linux-gnu/mosquitto_dynamic_security.so"
+
   should_run mosquitto || return 0
 
-  log "mosquitto: exercising mosquitto_sub JSON formatting"
+  log "mosquitto: exercising dynamic-security JSON persistence and mosquitto_sub JSON formatting"
   install_packages mosquitto mosquitto-clients
   assert_links_to_original "$(command -v mosquitto_sub)"
+  test -f "$dynsec_plugin" || die "mosquitto dynamic-security plugin was not installed"
+  assert_links_to_original "$dynsec_plugin"
 
   (
     set -euo pipefail
+    broker_pid=0
+    cleanup() {
+      if [[ "$broker_pid" != "0" ]]; then
+        kill "$broker_pid" 2>/dev/null || true
+        wait "$broker_pid" 2>/dev/null || true
+      fi
+    }
+    trap cleanup EXIT
+
     cat > /tmp/mosquitto.conf <<'EOF'
 listener 18883 127.0.0.1
-allow_anonymous true
-persistence false
+allow_anonymous false
+user root
+plugin /usr/lib/x86_64-linux-gnu/mosquitto_dynamic_security.so
+plugin_opt_config_file /tmp/mosquitto-dynsec.json
 EOF
 
+    mosquitto_ctrl dynsec init /tmp/mosquitto-dynsec.json admin secret >/tmp/mosquitto-dynsec-init.log
+    chmod 0666 /tmp/mosquitto-dynsec.json
     mosquitto -c /tmp/mosquitto.conf >/tmp/mosquitto.log 2>&1 &
     broker_pid="$!"
-    trap 'kill "$broker_pid" 2>/dev/null || true; wait "$broker_pid" 2>/dev/null || true' EXIT
 
     for _ in $(seq 1 100); do
       nc -z 127.0.0.1 18883 && break
       sleep 0.1
     done
 
-    mosquitto_sub -h 127.0.0.1 -p 18883 -t smoke/json -F '%j' -C 1 >/tmp/mosquitto-sub.json &
+    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec createClient app -p apppass >/tmp/mosquitto-dynsec-client.log
+    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec createRole pubsub >/tmp/mosquitto-dynsec-role.log
+    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub publishClientSend smoke/json allow >/tmp/mosquitto-dynsec-acl-send.log
+    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub publishClientReceive smoke/json allow >/tmp/mosquitto-dynsec-acl-recv.log
+    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addRoleACL pubsub subscribeLiteral smoke/json allow >/tmp/mosquitto-dynsec-acl-sub.log
+    mosquitto_ctrl -h 127.0.0.1 -p 18883 -u admin -P secret dynsec addClientRole app pubsub >/tmp/mosquitto-dynsec-client-role.log
+
+    mosquitto_sub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -F '%j' -C 1 >/tmp/mosquitto-sub.json &
     sub_pid="$!"
     sleep 0.5
-    mosquitto_pub -h 127.0.0.1 -p 18883 -t smoke/json -m 'hello'
+    mosquitto_pub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -m 'hello'
+    wait "$sub_pid"
+    sleep 0.5
+
+    kill "$broker_pid"
+    wait "$broker_pid" || true
+    broker_pid=0
+
+    mosquitto -c /tmp/mosquitto.conf >/tmp/mosquitto-restart.log 2>&1 &
+    broker_pid="$!"
+    for _ in $(seq 1 100); do
+      nc -z 127.0.0.1 18883 && break
+      sleep 0.1
+    done
+
+    mosquitto_sub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -C 1 >/tmp/mosquitto-sub-restart.out &
+    sub_pid="$!"
+    sleep 0.5
+    mosquitto_pub -h 127.0.0.1 -p 18883 -u app -P apppass -t smoke/json -m 'persisted'
     wait "$sub_pid"
   )
 
   jq -e '.topic == "smoke/json" and .payload == "hello" and .payloadlen == 5' /tmp/mosquitto-sub.json >/dev/null
+  grep -Fx 'persisted' /tmp/mosquitto-sub-restart.out >/dev/null
 }
 
 test_ocp() {
   local src=""
   local binary=""
+  local lib_path=""
 
   should_run ocp || return 0
 
@@ -490,7 +533,123 @@ test_ocp() {
   "
   run_bash_logged /tmp/ocp-build.log "cd '$src' && make -j'$(nproc)'"
 
-  assert_any_tree_links_to_original "$src" "ocp"
+  lib_path="$src/libocp.so"
+  test -f "$lib_path" || die "ocp build did not produce libocp.so"
+  assert_links_to_original "$lib_path"
+
+  log "ocp: exercising cached MusicBrainz JSON parsing through musicbrainz.c"
+  run_bash_logged /tmp/ocp-musicbrainz-build.log "
+    cd '$src'
+    cat > /tmp/ocp-musicbrainz-smoke.c <<'EOF'
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <cJSON.h>
+
+#include \"filesel/musicbrainz.c\"
+
+void *ocpPipeProcess_create(const char * const commandLine[]) {
+  (void)commandLine;
+  return NULL;
+}
+
+int main(void) {
+  static const char discid[] = \"0123456789ABCDEFGHIJKLMNAB\";
+  static const char toc[] = \"1 1 150\";
+  static const char payload[] =
+      \"{\\\"releases\\\":[{\\\"title\\\":\\\"Test Album\\\",\\\"date\\\":\\\"2024-03-14\\\",\\\"artist-credit\\\":[{\\\"name\\\":\\\"Test Artist\\\"}],\\\"media\\\":[{\\\"tracks\\\":[{\\\"number\\\":\\\"1\\\",\\\"title\\\":\\\"First Track\\\",\\\"recording\\\":{\\\"first-release-date\\\":\\\"2024-03-15\\\"},\\\"artist-credit\\\":[{\\\"name\\\":\\\"Track Artist\\\"},{\\\"joinphrase\\\":\\\" feat. \\\"},{\\\"name\\\":\\\"Guest\\\"}]}]}]}]}\";
+  struct musicbrainz_database_h *result = NULL;
+  struct musicbrainz_database_h *direct = NULL;
+  void *token = NULL;
+  cJSON *root = NULL;
+  cJSON *releases = NULL;
+  cJSON *release = NULL;
+  size_t payload_len = strlen(payload);
+
+  musicbrainz.cache = calloc(1, sizeof(*musicbrainz.cache));
+  if (musicbrainz.cache == NULL) {
+    fprintf(stderr, \"musicbrainz cache allocation failed\\n\");
+    return 1;
+  }
+  musicbrainz.cachesize = 1;
+  musicbrainz.cachecount = 1;
+  memcpy(musicbrainz.cache[0].discid, discid, sizeof(discid));
+  musicbrainz.cache[0].lastscan = (uint64_t)time(NULL);
+  musicbrainz.cache[0].size = (uint32_t)payload_len | SIZE_VALID;
+  musicbrainz.cache[0].data = malloc(payload_len + 1);
+  if (musicbrainz.cache[0].data == NULL) {
+    fprintf(stderr, \"musicbrainz cache payload allocation failed\\n\");
+    free(musicbrainz.cache);
+    musicbrainz.cache = NULL;
+    return 2;
+  }
+  memcpy(musicbrainz.cache[0].data, payload, payload_len + 1);
+
+  token = musicbrainz_lookup_discid_init(discid, toc, &result);
+  if (token != NULL) {
+    fprintf(stderr, \"expected a cache hit, but musicbrainz queued a lookup\\n\");
+    return 3;
+  }
+  if (result == NULL) {
+    fprintf(stderr, \"MusicBrainz cache lookup produced no metadata\\n\");
+    return 4;
+  }
+
+  if (strcmp(result->album, \"Test Album\") != 0 ||
+      strcmp(result->artist[0], \"Test Artist\") != 0 ||
+      strcmp(result->title[1], \"First Track\") != 0 ||
+      strcmp(result->artist[1], \"Track Artist feat. Guest\") != 0 ||
+      result->date[0] != ((2024u << 16) | (3u << 8) | 14u) ||
+      result->date[1] != ((2024u << 16) | (3u << 8) | 15u)) {
+    fprintf(stderr, \"unexpected cached MusicBrainz metadata was parsed\\n\");
+    return 5;
+  }
+
+  root = cJSON_Parse(payload);
+  if (root == NULL) {
+    fprintf(stderr, \"failed to parse MusicBrainz JSON payload\\n\");
+    return 6;
+  }
+  releases = cJSON_GetObjectItem(root, \"releases\");
+  release = cJSON_GetArrayItem(releases, 0);
+  if (!cJSON_IsObject(release)) {
+    fprintf(stderr, \"MusicBrainz JSON payload did not contain a release\\n\");
+    return 7;
+  }
+  musicbrainz_parse_release(release, &direct);
+  if (direct == NULL) {
+    fprintf(stderr, \"musicbrainz_parse_release did not produce metadata\\n\");
+    return 8;
+  }
+  if (strcmp(direct->album, \"Test Album\") != 0 ||
+      strcmp(direct->artist[1], \"Track Artist feat. Guest\") != 0) {
+    fprintf(stderr, \"unexpected direct MusicBrainz parsing output\\n\");
+    return 9;
+  }
+
+  puts(result->album);
+  puts(result->title[1]);
+  puts(direct->artist[1]);
+  musicbrainz_database_h_free(result);
+  musicbrainz_database_h_free(direct);
+  cJSON_Delete(root);
+  free(musicbrainz.cache[0].data);
+  free(musicbrainz.cache);
+  return 0;
+}
+EOF
+    cc \$(pkg-config --cflags libcjson) -ffunction-sections -fdata-sections -I'$src' \
+      /tmp/ocp-musicbrainz-smoke.c \
+      \$(pkg-config --libs libcjson) -Wl,--gc-sections -o /tmp/ocp-musicbrainz-smoke
+  "
+  assert_links_to_original /tmp/ocp-musicbrainz-smoke
+  run_logged /tmp/ocp-musicbrainz.log /tmp/ocp-musicbrainz-smoke
+  grep -Fx 'Test Album' /tmp/ocp-musicbrainz.log >/dev/null
+  grep -Fx 'First Track' /tmp/ocp-musicbrainz.log >/dev/null
+  grep -Fx 'Track Artist feat. Guest' /tmp/ocp-musicbrainz.log >/dev/null
+
   if [[ -x "$src/ocp-curses" ]]; then
     binary="$src/ocp-curses"
   elif [[ -x "$src/ocp" ]]; then
@@ -582,7 +741,7 @@ test_qad() {
   install_build_deps qad
   src="$(fetch_source qad)"
 
-  log "qad: building the HTTP/JSON daemon and checking its CLI"
+  log "qad: building the HTTP/JSON daemon and exercising REST JSON request parsing"
   rm -rf "$build_dir"
   run_logged /tmp/qad-setup.log meson setup "$build_dir" "$src" -Dbackend-ilm=false
   run_logged /tmp/qad-build.log meson compile -C "$build_dir"
@@ -591,6 +750,126 @@ test_qad() {
   assert_links_to_original "$build_dir/qad"
   run_logged /tmp/qad-help.log "$build_dir/qad" --help
   grep -F -- '--port' /tmp/qad-help.log >/dev/null
+
+  run_bash_logged /tmp/qad-json-smoke-build.log "
+    cat > /tmp/qad-json-smoke.c <<'EOF'
+#include <stdio.h>
+#include <string.h>
+#include <backend.h>
+
+struct MHD_Connection;
+void qad_post_handler(struct MHD_Connection *connection, const char *url,
+                      const char *post_data, int post_data_size,
+                      qad_backend_t *backend, char *error);
+
+static int last_move[3];
+static int last_button[2];
+static int last_touch[4];
+static int last_swipe[6];
+
+static int stub_move(int x, int y, int event) {
+  last_move[0] = x;
+  last_move[1] = y;
+  last_move[2] = event;
+  return 0;
+}
+
+static int stub_button(int value, int event) {
+  last_button[0] = value;
+  last_button[1] = event;
+  return 0;
+}
+
+static int stub_touch(int x, int y, int duration, int event) {
+  last_touch[0] = x;
+  last_touch[1] = y;
+  last_touch[2] = duration;
+  last_touch[3] = event;
+  return 0;
+}
+
+static int stub_swipe(int x, int y, int x2, int y2, int velocity, int event) {
+  last_swipe[0] = x;
+  last_swipe[1] = y;
+  last_swipe[2] = x2;
+  last_swipe[3] = y2;
+  last_swipe[4] = velocity;
+  last_swipe[5] = event;
+  return 0;
+}
+
+qad_backend_input_t *create_input_backend(void) {
+  return NULL;
+}
+
+qad_backend_screen_t *kms_create_backend(const char *kms_backend_card, const int kms_format_rgb) {
+  (void)kms_backend_card;
+  (void)kms_format_rgb;
+  return NULL;
+}
+
+int main(void) {
+  const char *move_json = \"{\\\"x\\\":12,\\\"y\\\":34,\\\"event\\\":1}\";
+  const char *button_json = \"{\\\"value\\\":1,\\\"event\\\":0}\";
+  const char *touch_json = \"{\\\"x\\\":10,\\\"y\\\":20,\\\"event\\\":1,\\\"duration\\\":5}\";
+  const char *swipe_json = \"{\\\"x\\\":1,\\\"y\\\":2,\\\"x2\\\":3,\\\"y2\\\":4,\\\"event\\\":1,\\\"velocity\\\":9}\";
+  const char *invalid_move_json = \"{\\\"x\\\":\\\"bad\\\"}\";
+  qad_backend_input_t input = {0};
+  qad_backend_t backend = {0};
+  char error[255];
+
+  input.move = stub_move;
+  input.button = stub_button;
+  input.touch = stub_touch;
+  input.swipe = stub_swipe;
+  backend.input_backend = &input;
+
+  memset(error, 0, sizeof(error));
+  qad_post_handler(NULL, \"/move\", move_json, (int)strlen(move_json), &backend, error);
+  if (error[0] != '\\0' || last_move[0] != 12 || last_move[1] != 34 || last_move[2] != 1) {
+    fprintf(stderr, \"move JSON was not parsed correctly\\n\");
+    return 1;
+  }
+
+  memset(error, 0, sizeof(error));
+  qad_post_handler(NULL, \"/button\", button_json, (int)strlen(button_json), &backend, error);
+  if (error[0] != '\\0' || last_button[0] != 1 || last_button[1] != 0) {
+    fprintf(stderr, \"button JSON was not parsed correctly\\n\");
+    return 2;
+  }
+
+  memset(error, 0, sizeof(error));
+  qad_post_handler(NULL, \"/touch\", touch_json, (int)strlen(touch_json), &backend, error);
+  if (error[0] != '\\0' || last_touch[0] != 10 || last_touch[1] != 20 || last_touch[2] != 5 || last_touch[3] != 1) {
+    fprintf(stderr, \"touch JSON was not parsed correctly\\n\");
+    return 3;
+  }
+
+  memset(error, 0, sizeof(error));
+  qad_post_handler(NULL, \"/swipe\", swipe_json, (int)strlen(swipe_json), &backend, error);
+  if (error[0] != '\\0' || last_swipe[0] != 1 || last_swipe[1] != 2 || last_swipe[2] != 3 ||
+      last_swipe[3] != 4 || last_swipe[4] != 9 || last_swipe[5] != 1) {
+    fprintf(stderr, \"swipe JSON was not parsed correctly\\n\");
+    return 4;
+  }
+
+  memset(error, 0, sizeof(error));
+  qad_post_handler(NULL, \"/move\", invalid_move_json, (int)strlen(invalid_move_json), &backend, error);
+  if (strstr(error, \"Coordinates\") == NULL) {
+    fprintf(stderr, \"invalid move JSON did not produce the expected validation error\\n\");
+    return 5;
+  }
+
+  puts(\"qad-json-ok\");
+  return 0;
+}
+EOF
+    cc -Dmain=qad_server_main -I'$src/include' -I'$src/src' -I'$build_dir' -c '$src/src/server.c' -o /tmp/qad-server.o
+    cc -I'$src/include' -I'$src/src' -I'$build_dir' /tmp/qad-json-smoke.c /tmp/qad-server.o -lmicrohttpd -lcjson -o /tmp/qad-json-smoke
+  "
+  assert_links_to_original /tmp/qad-json-smoke
+  run_logged /tmp/qad-json-smoke.log /tmp/qad-json-smoke
+  grep -Fx 'qad-json-ok' /tmp/qad-json-smoke.log >/dev/null
 }
 
 test_snibbetracker() {
