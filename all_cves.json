@@ -1,0 +1,2664 @@
+{
+  "generated_at": "2026-04-03T04:27:43.852513Z",
+  "source_package": {
+    "name": "cjson",
+    "homepage": "https://github.com/DaveGamble/cJSON",
+    "current_repo_package_version": "1.7.17-1",
+    "current_repo_upstream_version": "1.7.17",
+    "ubuntu_release_context": "24.04 LTS (noble)"
+  },
+  "enumeration": {
+    "debian_security_tracker_source_package_url": "https://security-tracker.debian.org/tracker/source-package/cjson",
+    "cve_services_api_base": "https://cveawg.mitre.org/api/cve/",
+    "ubuntu_security_base": "https://ubuntu.com/security/",
+    "cve_ids": [
+      "CVE-2025-57052",
+      "CVE-2024-31755",
+      "CVE-2023-53154",
+      "CVE-2023-50472",
+      "CVE-2023-50471",
+      "CVE-2023-26819",
+      "CVE-2019-1010239",
+      "CVE-2019-11835",
+      "CVE-2019-11834",
+      "CVE-2018-1000217",
+      "CVE-2018-1000216",
+      "CVE-2018-1000215",
+      "CVE-2016-10749"
+    ],
+    "count": 13
+  },
+  "current_package_assessment": {
+    "affected": [
+      "CVE-2025-57052",
+      "CVE-2024-31755",
+      "CVE-2023-53154",
+      "CVE-2023-26819"
+    ],
+    "not_affected": [
+      "CVE-2023-50472",
+      "CVE-2023-50471",
+      "CVE-2019-1010239",
+      "CVE-2019-11835",
+      "CVE-2019-11834",
+      "CVE-2018-1000217",
+      "CVE-2018-1000216",
+      "CVE-2018-1000215",
+      "CVE-2016-10749"
+    ],
+    "unknown": []
+  },
+  "cves": [
+    {
+      "id": "CVE-2025-57052",
+      "summary": "cJSON 1.5.0 through 1.7.18 allows out-of-bounds access via the decode_array_index_from_pointer function in cJSON_Utils.c, allowing remote attackers to bypass array bounds checking and access restricted data via malformed JSON pointer strings containing alphanumeric characters.",
+      "current_package_status": {
+        "status": "affected",
+        "basis": "Ubuntu Noble lists cjson as fixed in 1.7.17-1ubuntu0.1~esm3, so the baseline package 1.7.17-1 predates the fix.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2025-57052",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2025-57052",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "questing",
+          "status": "Fixed",
+          "status_detail": "1.7.18-3.1ubuntu0.1"
+        },
+        {
+          "codename": "plucky",
+          "status": "Ignored",
+          "status_detail": "end of life, was needed"
+        },
+        {
+          "codename": "noble",
+          "status": "Fixed",
+          "status_detail": "1.7.17-1ubuntu0.1~esm3"
+        },
+        {
+          "codename": "jammy",
+          "status": "Fixed",
+          "status_detail": "1.7.15-1ubuntu0.1"
+        },
+        {
+          "codename": "focal",
+          "status": "Fixed",
+          "status_detail": "1.7.10-1.1ubuntu0.1~esm1"
+        }
+      ],
+      "cve_record": {
+        "dataType": "CVE_RECORD",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2025-57052",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2025-11-03T18:13:42.953Z",
+          "dateReserved": "2025-08-17T00:00:00.000Z",
+          "datePublished": "2025-09-03T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2025-09-03T14:42:24.347Z"
+            },
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON 1.5.0 through 1.7.18 allows out-of-bounds access via the decode_array_index_from_pointer function in cJSON_Utils.c, allowing remote attackers to bypass array bounds checking and access restricted data via malformed JSON pointer strings containing alphanumeric characters."
+              }
+            ],
+            "affected": [
+              {
+                "vendor": "n/a",
+                "product": "n/a",
+                "versions": [
+                  {
+                    "version": "n/a",
+                    "status": "affected"
+                  }
+                ]
+              }
+            ],
+            "references": [
+              {
+                "url": "https://x-0r.com/posts/cJSON-Array-Index-Parsing-Vulnerability"
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "type": "text",
+                    "lang": "en",
+                    "description": "n/a"
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "problemTypes": [
+                {
+                  "descriptions": [
+                    {
+                      "type": "CWE",
+                      "cweId": "CWE-129",
+                      "lang": "en",
+                      "description": "CWE-129 Improper Validation of Array Index"
+                    }
+                  ]
+                },
+                {
+                  "descriptions": [
+                    {
+                      "type": "CWE",
+                      "cweId": "CWE-125",
+                      "lang": "en",
+                      "description": "CWE-125 Out-of-bounds Read"
+                    }
+                  ]
+                }
+              ],
+              "metrics": [
+                {
+                  "cvssV3_1": {
+                    "scope": "UNCHANGED",
+                    "version": "3.1",
+                    "baseScore": 9.8,
+                    "attackVector": "NETWORK",
+                    "baseSeverity": "CRITICAL",
+                    "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                    "integrityImpact": "HIGH",
+                    "userInteraction": "NONE",
+                    "attackComplexity": "LOW",
+                    "availabilityImpact": "HIGH",
+                    "privilegesRequired": "NONE",
+                    "confidentialityImpact": "HIGH"
+                  }
+                },
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2025-09-03T17:36:03.895588Z",
+                      "id": "CVE-2025-57052",
+                      "options": [
+                        {
+                          "Exploitation": "poc"
+                        },
+                        {
+                          "Automatable": "yes"
+                        },
+                        {
+                          "Technical Impact": "total"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2025-09-03T17:41:11.483Z"
+              }
+            },
+            {
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://lists.debian.org/debian-lts-announce/2025/09/msg00019.html"
+                }
+              ],
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2025-11-03T18:13:42.953Z"
+              }
+            }
+          ]
+        },
+        "dataVersion": "5.2"
+      }
+    },
+    {
+      "id": "CVE-2024-31755",
+      "summary": "cJSON v1.7.17 was discovered to contain a segmentation violation, which can trigger through the second parameter of function cJSON_SetValuestring at cJSON.c.",
+      "current_package_status": {
+        "status": "affected",
+        "basis": "Ubuntu Noble lists cjson as fixed in 1.7.17-1ubuntu0.1~esm2, so the baseline package 1.7.17-1 predates the fix.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2024-31755",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2024-31755",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "questing",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "plucky",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "oracular",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "noble",
+          "status": "Fixed",
+          "status_detail": "1.7.17-1ubuntu0.1~esm2"
+        },
+        {
+          "codename": "mantic",
+          "status": "Fixed",
+          "status_detail": "1.7.16-1ubuntu0.2"
+        },
+        {
+          "codename": "jammy",
+          "status": "Fixed",
+          "status_detail": "1.7.15-1ubuntu0.1~esm2"
+        },
+        {
+          "codename": "focal",
+          "status": "Not affected",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2024-31755",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2024-08-02T01:59:49.417Z",
+          "dateReserved": "2024-04-05T00:00:00.000Z",
+          "datePublished": "2024-04-26T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2024-04-26T02:31:40.128Z"
+            },
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON v1.7.17 was discovered to contain a segmentation violation, which can trigger through the second parameter of function cJSON_SetValuestring at cJSON.c."
+              }
+            ],
+            "affected": [
+              {
+                "vendor": "n/a",
+                "product": "n/a",
+                "versions": [
+                  {
+                    "version": "n/a",
+                    "status": "affected"
+                  }
+                ]
+              }
+            ],
+            "references": [
+              {
+                "url": "https://github.com/DaveGamble/cJSON/issues/839"
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "type": "text",
+                    "lang": "en",
+                    "description": "n/a"
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "title": "CISA ADP Vulnrichment",
+              "metrics": [
+                {
+                  "cvssV3_1": {
+                    "scope": "UNCHANGED",
+                    "version": "3.1",
+                    "baseScore": 7.6,
+                    "attackVector": "NETWORK",
+                    "baseSeverity": "HIGH",
+                    "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H",
+                    "integrityImpact": "LOW",
+                    "userInteraction": "NONE",
+                    "attackComplexity": "LOW",
+                    "availabilityImpact": "HIGH",
+                    "privilegesRequired": "LOW",
+                    "confidentialityImpact": "LOW"
+                  }
+                },
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "id": "CVE-2024-31755",
+                      "role": "CISA Coordinator",
+                      "options": [
+                        {
+                          "Exploitation": "poc"
+                        },
+                        {
+                          "Automatable": "no"
+                        },
+                        {
+                          "Technical Impact": "partial"
+                        }
+                      ],
+                      "version": "2.0.3",
+                      "timestamp": "2024-04-29T19:00:03.935206Z"
+                    }
+                  }
+                }
+              ],
+              "affected": [
+                {
+                  "cpes": [
+                    "cpe:2.3:a:cjson_project:cjson:*:*:*:*:*:*:*:*"
+                  ],
+                  "vendor": "cjson_project",
+                  "product": "cjson",
+                  "versions": [
+                    {
+                      "status": "affected",
+                      "version": "1.7.17"
+                    }
+                  ],
+                  "defaultStatus": "unknown"
+                }
+              ],
+              "problemTypes": [
+                {
+                  "descriptions": [
+                    {
+                      "lang": "en",
+                      "type": "CWE",
+                      "cweId": "CWE-476",
+                      "description": "CWE-476 NULL Pointer Dereference"
+                    }
+                  ]
+                }
+              ],
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2024-06-04T17:36:40.334Z"
+              }
+            },
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-02T01:59:49.417Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://github.com/DaveGamble/cJSON/issues/839",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CVE-2023-53154",
+      "summary": "parse_string in cJSON before 1.7.18 has a heap-based buffer over-read via {\"1\":1, with no trailing newline if cJSON_ParseWithLength is called.",
+      "current_package_status": {
+        "status": "affected",
+        "basis": "Ubuntu Noble lists cjson as fixed in 1.7.17-1ubuntu0.1~esm3, so the baseline package 1.7.17-1 predates the fix.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2023-53154",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2023-53154",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "questing",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "plucky",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "oracular",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "noble",
+          "status": "Fixed",
+          "status_detail": "1.7.17-1ubuntu0.1~esm3"
+        },
+        {
+          "codename": "jammy",
+          "status": "Fixed",
+          "status_detail": "1.7.15-1ubuntu0.1"
+        },
+        {
+          "codename": "focal",
+          "status": "Fixed",
+          "status_detail": "1.7.10-1.1ubuntu0.1~esm1"
+        }
+      ],
+      "cve_record": {
+        "dataType": "CVE_RECORD",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2023-53154",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2025-11-03T19:28:58.976Z",
+          "dateReserved": "2025-05-23T00:00:00.000Z",
+          "datePublished": "2025-05-23T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "defaultStatus": "unaffected",
+                "product": "cJSON",
+                "vendor": "cJSON project",
+                "versions": [
+                  {
+                    "lessThan": "1.7.18",
+                    "status": "affected",
+                    "version": "0",
+                    "versionType": "semver"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "parse_string in cJSON before 1.7.18 has a heap-based buffer over-read via {\"1\":1, with no trailing newline if cJSON_ParseWithLength is called."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "cweId": "CWE-125",
+                    "description": "CWE-125 Out-of-bounds Read",
+                    "lang": "en",
+                    "type": "CWE"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2025-05-23T15:16:29.711Z"
+            },
+            "references": [
+              {
+                "url": "https://github.com/DaveGamble/cJSON/compare/v1.7.17...v1.7.18"
+              },
+              {
+                "url": "https://github.com/DaveGamble/cJSON/issues/800"
+              }
+            ],
+            "x_generator": {
+              "engine": "enrichogram 0.0.1"
+            },
+            "metrics": [
+              {
+                "cvssV3_1": {
+                  "version": "3.1",
+                  "baseScore": 2.9,
+                  "baseSeverity": "LOW",
+                  "vectorString": "CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+                }
+              }
+            ],
+            "cpeApplicability": [
+              {
+                "nodes": [
+                  {
+                    "operator": "OR",
+                    "negate": false,
+                    "cpeMatch": [
+                      {
+                        "vulnerable": true,
+                        "criteria": "cpe:2.3:a:cjson_project:cjson:*:*:*:*:*:*:*:*",
+                        "versionEndExcluding": "1.7.18"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "references": [
+                {
+                  "url": "https://github.com/DaveGamble/cJSON/issues/800",
+                  "tags": [
+                    "exploit"
+                  ]
+                }
+              ],
+              "metrics": [
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2025-05-23T15:41:47.066979Z",
+                      "id": "CVE-2023-53154",
+                      "options": [
+                        {
+                          "Exploitation": "poc"
+                        },
+                        {
+                          "Automatable": "no"
+                        },
+                        {
+                          "Technical Impact": "partial"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2025-05-23T15:41:58.930Z"
+              }
+            },
+            {
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://lists.debian.org/debian-lts-announce/2025/06/msg00014.html"
+                }
+              ],
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2025-11-03T19:28:58.976Z"
+              }
+            }
+          ]
+        },
+        "dataVersion": "5.2"
+      }
+    },
+    {
+      "id": "CVE-2023-50472",
+      "summary": "cJSON v1.7.16 was discovered to contain a segmentation violation via the function cJSON_SetValuestring at cJSON.c.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "Ubuntu Noble marks cjson as not affected for this CVE.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2023-50472",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2023-50472",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "questing",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "plucky",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "oracular",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "noble",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "mantic",
+          "status": "Fixed",
+          "status_detail": "1.7.16-1ubuntu0.2"
+        },
+        {
+          "codename": "lunar",
+          "status": "Ignored",
+          "status_detail": "end of life, was needs-triage"
+        },
+        {
+          "codename": "jammy",
+          "status": "Fixed",
+          "status_detail": "1.7.15-1ubuntu0.1~esm2"
+        },
+        {
+          "codename": "focal",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "bionic",
+          "status": "Ignored",
+          "status_detail": "end of standard support"
+        },
+        {
+          "codename": "xenial",
+          "status": "Ignored",
+          "status_detail": "end of standard support"
+        },
+        {
+          "codename": "trusty",
+          "status": "Ignored",
+          "status_detail": "end of standard support"
+        }
+      ],
+      "cve_record": {
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2023-50472",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2024-08-28T14:15:13.394Z",
+          "dateReserved": "2023-12-11T00:00:00.000Z",
+          "datePublished": "2023-12-14T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2023-12-14T20:01:20.426Z"
+            },
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON v1.7.16 was discovered to contain a segmentation violation via the function cJSON_SetValuestring at cJSON.c."
+              }
+            ],
+            "affected": [
+              {
+                "vendor": "n/a",
+                "product": "n/a",
+                "versions": [
+                  {
+                    "version": "n/a",
+                    "status": "affected"
+                  }
+                ]
+              }
+            ],
+            "references": [
+              {
+                "url": "https://github.com/DaveGamble/cJSON/issues/803"
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "type": "text",
+                    "lang": "en",
+                    "description": "n/a"
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-02T22:16:46.843Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://github.com/DaveGamble/cJSON/issues/803",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                }
+              ]
+            },
+            {
+              "metrics": [
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2024-08-28T14:11:27.695411Z",
+                      "id": "CVE-2023-50472",
+                      "options": [
+                        {
+                          "Exploitation": "poc"
+                        },
+                        {
+                          "Automatable": "yes"
+                        },
+                        {
+                          "Technical Impact": "partial"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2024-08-28T14:15:13.394Z"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CVE-2023-50471",
+      "summary": "cJSON v1.7.16 was discovered to contain a segmentation violation via the function cJSON_InsertItemInArray at cJSON.c.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "Ubuntu Noble marks cjson as not affected for this CVE.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2023-50471",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2023-50471",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "questing",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "plucky",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "oracular",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "noble",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "mantic",
+          "status": "Fixed",
+          "status_detail": "1.7.16-1ubuntu0.2"
+        },
+        {
+          "codename": "lunar",
+          "status": "Ignored",
+          "status_detail": "end of life, was needs-triage"
+        },
+        {
+          "codename": "jammy",
+          "status": "Fixed",
+          "status_detail": "1.7.15-1ubuntu0.1~esm2"
+        },
+        {
+          "codename": "focal",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "bionic",
+          "status": "Ignored",
+          "status_detail": "end of standard support"
+        },
+        {
+          "codename": "xenial",
+          "status": "Ignored",
+          "status_detail": "end of standard support"
+        },
+        {
+          "codename": "trusty",
+          "status": "Ignored",
+          "status_detail": "end of standard support"
+        }
+      ],
+      "cve_record": {
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.2",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2023-50471",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2025-11-04T22:05:22.856Z",
+          "dateReserved": "2023-12-11T00:00:00.000Z",
+          "datePublished": "2023-12-14T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2024-04-23T03:05:58.832Z"
+            },
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON v1.7.16 was discovered to contain a segmentation violation via the function cJSON_InsertItemInArray at cJSON.c."
+              }
+            ],
+            "affected": [
+              {
+                "vendor": "n/a",
+                "product": "n/a",
+                "versions": [
+                  {
+                    "version": "n/a",
+                    "status": "affected"
+                  }
+                ]
+              }
+            ],
+            "references": [
+              {
+                "url": "https://github.com/DaveGamble/cJSON/issues/802"
+              },
+              {
+                "name": "[debian-lts-announce] 20231230 [SECURITY] [DLA 3700-1] cjson security update",
+                "tags": [
+                  "mailing-list"
+                ],
+                "url": "https://lists.debian.org/debian-lts-announce/2023/12/msg00023.html"
+              },
+              {
+                "name": "FEDORA-2024-74563262c0",
+                "tags": [
+                  "vendor-advisory"
+                ],
+                "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/EO4XCUTY3ZMVW4YBG6DBYVS5NSMNP6JY/"
+              },
+              {
+                "name": "FEDORA-2024-b93a6b1325",
+                "tags": [
+                  "vendor-advisory"
+                ],
+                "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/YQOQ7CAOYBNHGAMNOR7ELGLC22HV3ZQV/"
+              },
+              {
+                "name": "FEDORA-2024-5b487ca10a",
+                "tags": [
+                  "vendor-advisory"
+                ],
+                "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/JSI3LL6ZNKYNM5JKPA5FKZTATL4MPF7V/"
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "type": "text",
+                    "lang": "en",
+                    "description": "n/a"
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://github.com/DaveGamble/cJSON/issues/802",
+                  "tags": [
+                    "x_transferred"
+                  ]
+                },
+                {
+                  "name": "[debian-lts-announce] 20231230 [SECURITY] [DLA 3700-1] cjson security update",
+                  "tags": [
+                    "mailing-list",
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.debian.org/debian-lts-announce/2023/12/msg00023.html"
+                },
+                {
+                  "name": "FEDORA-2024-74563262c0",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/EO4XCUTY3ZMVW4YBG6DBYVS5NSMNP6JY/"
+                },
+                {
+                  "name": "FEDORA-2024-b93a6b1325",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/YQOQ7CAOYBNHGAMNOR7ELGLC22HV3ZQV/"
+                },
+                {
+                  "name": "FEDORA-2024-5b487ca10a",
+                  "tags": [
+                    "vendor-advisory",
+                    "x_transferred"
+                  ],
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/JSI3LL6ZNKYNM5JKPA5FKZTATL4MPF7V/"
+                },
+                {
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/YQOQ7CAOYBNHGAMNOR7ELGLC22HV3ZQV/"
+                },
+                {
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/EO4XCUTY3ZMVW4YBG6DBYVS5NSMNP6JY/"
+                },
+                {
+                  "url": "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/JSI3LL6ZNKYNM5JKPA5FKZTATL4MPF7V/"
+                }
+              ],
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2025-11-04T22:05:22.856Z"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CVE-2023-26819",
+      "summary": "cJSON 1.7.15 might allow a denial of service via a crafted JSON document such as {\"a\": true, \"b\": [ null,9999999999999999999999999999999999999999999999912345678901234567]}.",
+      "current_package_status": {
+        "status": "affected",
+        "basis": "Ubuntu Noble lists cjson as fixed in 1.7.17-1ubuntu0.1~esm3, so the baseline package 1.7.17-1 predates the fix.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2023-26819",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2023-26819",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "questing",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "plucky",
+          "status": "Ignored",
+          "status_detail": "end of life, was needed"
+        },
+        {
+          "codename": "oracular",
+          "status": "Ignored",
+          "status_detail": "end of life, was needs-triage"
+        },
+        {
+          "codename": "noble",
+          "status": "Fixed",
+          "status_detail": "1.7.17-1ubuntu0.1~esm3"
+        },
+        {
+          "codename": "jammy",
+          "status": "Fixed",
+          "status_detail": "1.7.15-1ubuntu0.1"
+        },
+        {
+          "codename": "focal",
+          "status": "Fixed",
+          "status_detail": "1.7.10-1.1ubuntu0.1~esm1"
+        }
+      ],
+      "cve_record": {
+        "dataType": "CVE_RECORD",
+        "cveMetadata": {
+          "state": "PUBLISHED",
+          "cveId": "CVE-2023-26819",
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "dateUpdated": "2025-11-03T19:28:10.065Z",
+          "dateReserved": "2023-02-27T00:00:00.000Z",
+          "datePublished": "2025-04-19T00:00:00.000Z"
+        },
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "defaultStatus": "unknown",
+                "product": "cJSON",
+                "vendor": "cJSON Project",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "1.7.15",
+                    "versionType": "semver"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON 1.7.15 might allow a denial of service via a crafted JSON document such as {\"a\": true, \"b\": [ null,9999999999999999999999999999999999999999999999912345678901234567]}."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "cweId": "CWE-440",
+                    "description": "CWE-440 Expected Behavior Violation",
+                    "lang": "en",
+                    "type": "CWE"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre",
+              "dateUpdated": "2025-04-19T21:30:22.133Z"
+            },
+            "references": [
+              {
+                "url": "https://github.com/boofish/json_bugs/tree/main/cjson"
+              }
+            ],
+            "x_generator": {
+              "engine": "enrichogram 0.0.1"
+            },
+            "metrics": [
+              {
+                "cvssV3_1": {
+                  "version": "3.1",
+                  "baseScore": 2.9,
+                  "baseSeverity": "LOW",
+                  "vectorString": "CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+                }
+              }
+            ],
+            "cpeApplicability": [
+              {
+                "nodes": [
+                  {
+                    "operator": "OR",
+                    "negate": false,
+                    "cpeMatch": [
+                      {
+                        "vulnerable": true,
+                        "criteria": "cpe:2.3:a:cjson_project:cjson:*:*:*:*:*:*:*:*",
+                        "versionStartIncluding": "1.7.15",
+                        "versionEndIncluding": "1.7.15"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "adp": [
+            {
+              "metrics": [
+                {
+                  "other": {
+                    "type": "ssvc",
+                    "content": {
+                      "timestamp": "2025-04-21T15:08:15.987157Z",
+                      "id": "CVE-2023-26819",
+                      "options": [
+                        {
+                          "Exploitation": "poc"
+                        },
+                        {
+                          "Automatable": "no"
+                        },
+                        {
+                          "Technical Impact": "partial"
+                        }
+                      ],
+                      "role": "CISA Coordinator",
+                      "version": "2.0.3"
+                    }
+                  }
+                }
+              ],
+              "title": "CISA ADP Vulnrichment",
+              "providerMetadata": {
+                "orgId": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+                "shortName": "CISA-ADP",
+                "dateUpdated": "2025-04-21T15:09:07.251Z"
+              }
+            },
+            {
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "url": "https://lists.debian.org/debian-lts-announce/2025/06/msg00014.html"
+                }
+              ],
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2025-11-03T19:28:10.065Z"
+              }
+            }
+          ]
+        },
+        "dataVersion": "5.2"
+      }
+    },
+    {
+      "id": "CVE-2019-1010239",
+      "summary": "DaveGamble/cJSON cJSON 1.7.8 is affected by: Improper Check for Unusual or Exceptional Conditions. The impact is: Null dereference, so attack can cause denial of service. The component is: cJSON_GetObjectItemCaseSensitive() function. The attack vector is: crafted json file. The fixed version is: 1.7.9 and later.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "The CVE record says this issue is fixed in 1.7.9 and later; current upstream is 1.7.17.",
+        "source": "CVE Services record"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2019-1010239",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2019-1010239",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "disco",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "cJSON",
+                "vendor": "DaveGamble/cJSON",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "1.7.8 [fixed: 1.7.9 and later]"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "DaveGamble/cJSON cJSON 1.7.8 is affected by: Improper Check for Unusual or Exceptional Conditions. The impact is: Null dereference, so attack can cause denial of service. The component is: cJSON_GetObjectItemCaseSensitive() function. The attack vector is: crafted json file. The fixed version is: 1.7.9 and later."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "Improper Check for Unusual or Exceptional Conditions",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2020-10-20T21:14:55.000Z",
+              "orgId": "7556d962-6fb7-411e-85fa-6cd62f095ba8",
+              "shortName": "dwf"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/315"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/commit/be749d7efa7c9021da746e685bd6dec79f9dd99b"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve-assign@distributedweaknessfiling.org",
+                "ID": "CVE-2019-1010239",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "cJSON",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "1.7.8 [fixed: 1.7.9 and later]"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "DaveGamble/cJSON"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "DaveGamble/cJSON cJSON 1.7.8 is affected by: Improper Check for Unusual or Exceptional Conditions. The impact is: Null dereference, so attack can cause denial of service. The component is: cJSON_GetObjectItemCaseSensitive() function. The attack vector is: crafted json file. The fixed version is: 1.7.9 and later."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "Improper Check for Unusual or Exceptional Conditions"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://www.oracle.com/security-alerts/cpuoct2020.html",
+                    "refsource": "MISC",
+                    "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/315",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/315"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/commit/be749d7efa7c9021da746e685bd6dec79f9dd99b",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/commit/be749d7efa7c9021da746e685bd6dec79f9dd99b"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-05T03:07:18.337Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/315"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/commit/be749d7efa7c9021da746e685bd6dec79f9dd99b"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "7556d962-6fb7-411e-85fa-6cd62f095ba8",
+          "assignerShortName": "dwf",
+          "cveId": "CVE-2019-1010239",
+          "datePublished": "2019-07-19T16:41:01.000Z",
+          "dateReserved": "2019-03-20T00:00:00.000Z",
+          "dateUpdated": "2024-08-05T03:07:18.337Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    },
+    {
+      "id": "CVE-2019-11835",
+      "summary": "cJSON before 1.7.11 allows out-of-bounds access, related to multiline comments.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "The CVE description scopes the issue to versions before 1.7.11; current upstream is 1.7.17.",
+        "source": "CVE Services record"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2019-11835",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2019-11835",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "eoan",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "disco",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "cosmic",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON before 1.7.11 allows out-of-bounds access, related to multiline comments."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2020-10-20T21:14:56.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/338"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "ID": "CVE-2019-11835",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "cJSON before 1.7.11 allows out-of-bounds access, related to multiline comments."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://www.oracle.com/security-alerts/cpuoct2020.html",
+                    "refsource": "MISC",
+                    "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/338",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/338"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-04T23:03:32.775Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/338"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2019-11835",
+          "datePublished": "2019-05-09T04:38:38.000Z",
+          "dateReserved": "2019-05-09T00:00:00.000Z",
+          "dateUpdated": "2024-08-04T23:03:32.775Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    },
+    {
+      "id": "CVE-2019-11834",
+      "summary": "cJSON before 1.7.11 allows out-of-bounds access, related to \\x00 in a string literal.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "The CVE description scopes the issue to versions before 1.7.11; current upstream is 1.7.17.",
+        "source": "CVE Services record"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2019-11834",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2019-11834",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "eoan",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "disco",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "cosmic",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "cJSON before 1.7.11 allows out-of-bounds access, related to \\x00 in a string literal."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2020-10-20T21:14:56.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/337"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "ID": "CVE-2019-11834",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "cJSON before 1.7.11 allows out-of-bounds access, related to \\x00 in a string literal."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://www.oracle.com/security-alerts/cpuoct2020.html",
+                    "refsource": "MISC",
+                    "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/337",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/337"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-04T23:03:32.815Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://www.oracle.com/security-alerts/cpuoct2020.html"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/337"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/releases/tag/v1.7.11"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/compare/c69134d...93688cb"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2019-11834",
+          "datePublished": "2019-05-09T04:38:26.000Z",
+          "dateReserved": "2019-05-09T00:00:00.000Z",
+          "dateUpdated": "2024-08-04T23:03:32.815Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    },
+    {
+      "id": "CVE-2018-1000217",
+      "summary": "Dave Gamble cJSON version 1.7.3 and earlier contains a CWE-416: Use After Free vulnerability in cJSON library that can result in Possible crash, corruption of data or even RCE. This attack appear to be exploitable via Depends on how application uses cJSON library. If application provides network interface then can be exploited over a network, otherwise just local.. This vulnerability appears to have been fixed in 1.7.4.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "The CVE description scopes the issue to version 1.7.3 and earlier; current upstream is 1.7.17.",
+        "source": "CVE Services record"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2018-1000217",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2018-1000217",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "dateAssigned": "2018-08-02T00:00:00.000Z",
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "Dave Gamble cJSON version 1.7.3 and earlier contains a CWE-416: Use After Free vulnerability in cJSON library that can result in Possible crash, corruption of data or even RCE. This attack appear to be exploitable via Depends on how application uses cJSON library. If application provides network interface then can be exploited over a network, otherwise just local.. This vulnerability appears to have been fixed in 1.7.4."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2018-08-20T20:00:00.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/248"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "DATE_ASSIGNED": "2018-08-02T16:41:53.507726",
+                "DATE_REQUESTED": "2018-07-23T16:54:45",
+                "ID": "CVE-2018-1000217",
+                "REQUESTER": "secure@veritas.com",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "Dave Gamble cJSON version 1.7.3 and earlier contains a CWE-416: Use After Free vulnerability in cJSON library that can result in Possible crash, corruption of data or even RCE. This attack appear to be exploitable via Depends on how application uses cJSON library. If application provides network interface then can be exploited over a network, otherwise just local.. This vulnerability appears to have been fixed in 1.7.4."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/248",
+                    "refsource": "CONFIRM",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/248"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-05T12:40:46.984Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/248"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2018-1000217",
+          "datePublished": "2018-08-20T20:00:00.000Z",
+          "dateReserved": "2018-08-20T00:00:00.000Z",
+          "dateUpdated": "2024-09-16T22:45:43.200Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    },
+    {
+      "id": "CVE-2018-1000216",
+      "summary": "Dave Gamble cJSON version 1.7.2 and earlier contains a CWE-415: Double Free vulnerability in cJSON library that can result in Possible crash or RCE. This attack appear to be exploitable via Attacker must be able to force victim to print JSON data, depending on how cJSON library is used this could be either local or over a network. This vulnerability appears to have been fixed in 1.7.3.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "The CVE description scopes the issue to version 1.7.2 and earlier; current upstream is 1.7.17.",
+        "source": "CVE Services record"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2018-1000216",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2018-1000216",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "dateAssigned": "2018-08-02T00:00:00.000Z",
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "Dave Gamble cJSON version 1.7.2 and earlier contains a CWE-415: Double Free vulnerability in cJSON library that can result in Possible crash or RCE. This attack appear to be exploitable via Attacker must be able to force victim to print JSON data, depending on how cJSON library is used this could be either local or over a network. This vulnerability appears to have been fixed in 1.7.3."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2018-08-20T20:00:00.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/241"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "DATE_ASSIGNED": "2018-08-02T16:41:53.506666",
+                "DATE_REQUESTED": "2018-07-23T16:43:09",
+                "ID": "CVE-2018-1000216",
+                "REQUESTER": "secure@veritas.com",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "Dave Gamble cJSON version 1.7.2 and earlier contains a CWE-415: Double Free vulnerability in cJSON library that can result in Possible crash or RCE. This attack appear to be exploitable via Attacker must be able to force victim to print JSON data, depending on how cJSON library is used this could be either local or over a network. This vulnerability appears to have been fixed in 1.7.3."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/241",
+                    "refsource": "CONFIRM",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/241"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-05T12:40:46.806Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/241"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2018-1000216",
+          "datePublished": "2018-08-20T20:00:00.000Z",
+          "dateReserved": "2018-08-20T00:00:00.000Z",
+          "dateUpdated": "2024-09-17T03:43:41.890Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    },
+    {
+      "id": "CVE-2018-1000215",
+      "summary": "Dave Gamble cJSON version 1.7.6 and earlier contains a CWE-772 vulnerability in cJSON library that can result in Denial of Service (DoS). This attack appear to be exploitable via If the attacker can force the data to be printed and the system is in low memory it can force a leak of memory. This vulnerability appears to have been fixed in 1.7.7.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "Ubuntu Noble marks cjson as not affected for this CVE.",
+        "source": "Ubuntu security tracker"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2018-1000215",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2018-1000215",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "oracular",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "noble",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "mantic",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "lunar",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "kinetic",
+          "status": "Ignored",
+          "status_detail": "end of life, was needed"
+        },
+        {
+          "codename": "jammy",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "impish",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "hirsute",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "groovy",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "focal",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "eoan",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "disco",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "cosmic",
+          "status": "Ignored",
+          "status_detail": "end of life"
+        },
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "dateAssigned": "2018-08-02T00:00:00.000Z",
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "Dave Gamble cJSON version 1.7.6 and earlier contains a CWE-772 vulnerability in cJSON library that can result in Denial of Service (DoS). This attack appear to be exploitable via If the attacker can force the data to be printed and the system is in low memory it can force a leak of memory. This vulnerability appears to have been fixed in 1.7.7."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2018-08-20T20:00:00.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_CONFIRM"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/267"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "DATE_ASSIGNED": "2018-08-02T16:41:53.505150",
+                "DATE_REQUESTED": "2018-07-23T16:30:00",
+                "ID": "CVE-2018-1000215",
+                "REQUESTER": "secure@veritas.com",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "Dave Gamble cJSON version 1.7.6 and earlier contains a CWE-772 vulnerability in cJSON library that can result in Denial of Service (DoS). This attack appear to be exploitable via If the attacker can force the data to be printed and the system is in low memory it can force a leak of memory. This vulnerability appears to have been fixed in 1.7.7."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/267",
+                    "refsource": "CONFIRM",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/267"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-05T12:40:46.860Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_CONFIRM",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/267"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2018-1000215",
+          "datePublished": "2018-08-20T20:00:00.000Z",
+          "dateReserved": "2018-08-20T00:00:00.000Z",
+          "dateUpdated": "2024-09-16T20:52:02.538Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    },
+    {
+      "id": "CVE-2016-10749",
+      "summary": "parse_string in cJSON.c in cJSON before 2016-10-02 has a buffer over-read, as demonstrated by a string that begins with a \" character and ends with a \\ character.",
+      "current_package_status": {
+        "status": "not_affected",
+        "basis": "The CVE description scopes the issue to cJSON before 2016-10-02; current upstream is 1.7.17.",
+        "source": "CVE Services record"
+      },
+      "cve_org_url": "https://www.cve.org/CVERecord?id=CVE-2016-10749",
+      "ubuntu_security_url": "https://ubuntu.com/security/CVE-2016-10749",
+      "ubuntu_release_statuses": [
+        {
+          "codename": "disco",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "cosmic",
+          "status": "Not affected",
+          "status_detail": null
+        },
+        {
+          "codename": "bionic",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "xenial",
+          "status": "Not in release",
+          "status_detail": null
+        },
+        {
+          "codename": "trusty",
+          "status": "Not in release",
+          "status_detail": null
+        }
+      ],
+      "cve_record": {
+        "containers": {
+          "cna": {
+            "affected": [
+              {
+                "product": "n/a",
+                "vendor": "n/a",
+                "versions": [
+                  {
+                    "status": "affected",
+                    "version": "n/a"
+                  }
+                ]
+              }
+            ],
+            "descriptions": [
+              {
+                "lang": "en",
+                "value": "parse_string in cJSON.c in cJSON before 2016-10-02 has a buffer over-read, as demonstrated by a string that begins with a \" character and ends with a \\ character."
+              }
+            ],
+            "problemTypes": [
+              {
+                "descriptions": [
+                  {
+                    "description": "n/a",
+                    "lang": "en",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "providerMetadata": {
+              "dateUpdated": "2019-04-29T13:46:59.000Z",
+              "orgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+              "shortName": "mitre"
+            },
+            "references": [
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/issues/30"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://www.openwall.com/lists/oss-security/2016/11/07/2"
+              },
+              {
+                "tags": [
+                  "x_refsource_MISC"
+                ],
+                "url": "https://github.com/DaveGamble/cJSON/commit/94df772485c92866ca417d92137747b2e3b0a917"
+              }
+            ],
+            "x_legacyV4Record": {
+              "CVE_data_meta": {
+                "ASSIGNER": "cve@mitre.org",
+                "ID": "CVE-2016-10749",
+                "STATE": "PUBLIC"
+              },
+              "affects": {
+                "vendor": {
+                  "vendor_data": [
+                    {
+                      "product": {
+                        "product_data": [
+                          {
+                            "product_name": "n/a",
+                            "version": {
+                              "version_data": [
+                                {
+                                  "version_value": "n/a"
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "vendor_name": "n/a"
+                    }
+                  ]
+                }
+              },
+              "data_format": "MITRE",
+              "data_type": "CVE",
+              "data_version": "4.0",
+              "description": {
+                "description_data": [
+                  {
+                    "lang": "eng",
+                    "value": "parse_string in cJSON.c in cJSON before 2016-10-02 has a buffer over-read, as demonstrated by a string that begins with a \" character and ends with a \\ character."
+                  }
+                ]
+              },
+              "problemtype": {
+                "problemtype_data": [
+                  {
+                    "description": [
+                      {
+                        "lang": "eng",
+                        "value": "n/a"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "references": {
+                "reference_data": [
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/issues/30",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/issues/30"
+                  },
+                  {
+                    "name": "https://www.openwall.com/lists/oss-security/2016/11/07/2",
+                    "refsource": "MISC",
+                    "url": "https://www.openwall.com/lists/oss-security/2016/11/07/2"
+                  },
+                  {
+                    "name": "https://github.com/DaveGamble/cJSON/commit/94df772485c92866ca417d92137747b2e3b0a917",
+                    "refsource": "MISC",
+                    "url": "https://github.com/DaveGamble/cJSON/commit/94df772485c92866ca417d92137747b2e3b0a917"
+                  }
+                ]
+              }
+            }
+          },
+          "adp": [
+            {
+              "providerMetadata": {
+                "orgId": "af854a3a-2127-422b-91ae-364da2661108",
+                "shortName": "CVE",
+                "dateUpdated": "2024-08-06T03:30:20.194Z"
+              },
+              "title": "CVE Program Container",
+              "references": [
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/issues/30"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://www.openwall.com/lists/oss-security/2016/11/07/2"
+                },
+                {
+                  "tags": [
+                    "x_refsource_MISC",
+                    "x_transferred"
+                  ],
+                  "url": "https://github.com/DaveGamble/cJSON/commit/94df772485c92866ca417d92137747b2e3b0a917"
+                }
+              ]
+            }
+          ]
+        },
+        "cveMetadata": {
+          "assignerOrgId": "8254265b-2729-46b6-b9e3-3dfca2d5bfca",
+          "assignerShortName": "mitre",
+          "cveId": "CVE-2016-10749",
+          "datePublished": "2019-04-29T13:46:59.000Z",
+          "dateReserved": "2019-04-29T00:00:00.000Z",
+          "dateUpdated": "2024-08-06T03:30:20.194Z",
+          "state": "PUBLISHED"
+        },
+        "dataType": "CVE_RECORD",
+        "dataVersion": "5.1"
+      }
+    }
+  ]
+}
