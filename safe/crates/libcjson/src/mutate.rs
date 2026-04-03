@@ -52,7 +52,20 @@ unsafe fn replace_item_in_object(
     replacement: *mut cJSON,
     case_sensitive: bool,
 ) -> c_int {
-    if replacement.is_null() || string.is_null() || object == replacement {
+    let item: *mut cJSON;
+    let new_key: *mut c_char;
+
+    if object.is_null() || replacement.is_null() || string.is_null() || object == replacement {
+        return 0;
+    }
+
+    item = get_object_item(object, string, case_sensitive);
+    if item.is_null() {
+        return 0;
+    }
+
+    new_key = duplicate_c_string(string);
+    if new_key.is_null() {
         return 0;
     }
 
@@ -60,18 +73,10 @@ unsafe fn replace_item_in_object(
         deallocate((*replacement).string as *mut c_void);
     }
 
-    (*replacement).string = duplicate_c_string(string);
-    if (*replacement).string.is_null() {
-        return 0;
-    }
-
+    (*replacement).string = new_key;
     (*replacement).type_ &= !cJSON_StringIsConst;
 
-    replace_item_via_pointer_internal(
-        object,
-        get_object_item(object, string, case_sensitive),
-        replacement,
-    )
+    replace_item_via_pointer_internal(object, item, replacement)
 }
 
 #[no_mangle]
@@ -97,16 +102,23 @@ pub unsafe extern "C" fn cJSON_AddItemReferenceToArray(
     array: *mut cJSON,
     item: *mut cJSON,
 ) -> c_int {
+    let reference: *mut cJSON;
+
     if array.is_null() || array == item {
         return 0;
     }
 
-    let reference: *mut cJSON = create_reference(item);
+    reference = create_reference(item);
     if reference.is_null() {
         return 0;
     }
 
-    add_item_to_array_internal(array, reference)
+    if add_item_to_array_internal(array, reference) == 0 {
+        delete_item(reference);
+        return 0;
+    }
+
+    1
 }
 
 #[no_mangle]
@@ -115,16 +127,23 @@ pub unsafe extern "C" fn cJSON_AddItemReferenceToObject(
     string: *const c_char,
     item: *mut cJSON,
 ) -> c_int {
+    let reference: *mut cJSON;
+
     if object.is_null() || string.is_null() || object == item {
         return 0;
     }
 
-    let reference: *mut cJSON = create_reference(item);
+    reference = create_reference(item);
     if reference.is_null() {
         return 0;
     }
 
-    add_item_to_object_internal(object, string, reference, false)
+    if add_item_to_object_internal(object, string, reference, false) == 0 {
+        delete_item(reference);
+        return 0;
+    }
+
+    1
 }
 
 #[no_mangle]

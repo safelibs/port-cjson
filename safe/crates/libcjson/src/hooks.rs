@@ -106,6 +106,14 @@ pub unsafe fn new_item_with_hooks(hooks: &InternalHooks) -> *mut cJSON {
     node
 }
 
+fn uses_system_malloc(candidate: Option<malloc_fn>) -> bool {
+    candidate.is_none() || candidate.map(|hook| hook as usize) == Some(malloc as *const () as usize)
+}
+
+fn uses_system_free(candidate: Option<free_fn>) -> bool {
+    candidate.is_none() || candidate.map(|hook| hook as usize) == Some(free as *const () as usize)
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn cJSON_InitHooks(hooks: *mut cJSON_Hooks) {
     if hooks.is_null() {
@@ -116,7 +124,8 @@ pub unsafe extern "C" fn cJSON_InitHooks(hooks: *mut cJSON_Hooks) {
     GLOBAL_HOOKS = InternalHooks {
         allocate: (*hooks).malloc_fn.unwrap_or(internal_malloc),
         deallocate: (*hooks).free_fn.unwrap_or(internal_free),
-        reallocate: if (*hooks).malloc_fn.is_none() && (*hooks).free_fn.is_none() {
+        reallocate: if uses_system_malloc((*hooks).malloc_fn) && uses_system_free((*hooks).free_fn)
+        {
             Some(internal_realloc)
         } else {
             None

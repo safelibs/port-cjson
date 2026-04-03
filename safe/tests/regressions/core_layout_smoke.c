@@ -63,6 +63,16 @@ static void cjson_layout_should_match_public_abi(void)
     TEST_FAIL_MESSAGE("Unsupported pointer size for cJSON ABI layout smoke test.");
 }
 
+static void cjson_hooks_layout_should_match_public_abi(void)
+{
+    TEST_ASSERT_EQUAL_UINT(sizeof(int), sizeof(cJSON_bool));
+    TEST_ASSERT_EQUAL_UINT(sizeof(void *), sizeof(((cJSON_Hooks*)0)->malloc_fn));
+    TEST_ASSERT_EQUAL_UINT(sizeof(void *), sizeof(((cJSON_Hooks*)0)->free_fn));
+    TEST_ASSERT_EQUAL_UINT(0u, offsetof(cJSON_Hooks, malloc_fn));
+    TEST_ASSERT_EQUAL_UINT(sizeof(void *), offsetof(cJSON_Hooks, free_fn));
+    TEST_ASSERT_EQUAL_UINT(sizeof(void *) * 2u, sizeof(cJSON_Hooks));
+}
+
 static void cjson_flag_constants_should_match_upstream_header(void)
 {
     TEST_ASSERT_EQUAL_INT(0, cJSON_Invalid);
@@ -83,6 +93,7 @@ int CJSON_CDECL main(void)
     UNITY_BEGIN();
 
     RUN_TEST(cjson_layout_should_match_public_abi);
+    RUN_TEST(cjson_hooks_layout_should_match_public_abi);
     RUN_TEST(cjson_flag_constants_should_match_upstream_header);
 
     return UNITY_END();

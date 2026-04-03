@@ -422,6 +422,84 @@ static void cjson_add_array_should_fail_on_allocation_failure(void)
     cJSON_Delete(root);
 }
 
+static void cjson_add_item_reference_to_object_should_add_reference(void)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON *number = cJSON_CreateNumber(42);
+    cJSON *reference = NULL;
+
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NOT_NULL(number);
+    TEST_ASSERT_TRUE(cJSON_AddItemReferenceToObject(root, "answer", number));
+
+    reference = cJSON_GetObjectItemCaseSensitive(root, "answer");
+    TEST_ASSERT_NOT_NULL(reference);
+    TEST_ASSERT_TRUE(reference != number);
+    TEST_ASSERT_TRUE(reference->type & cJSON_IsReference);
+    TEST_ASSERT_EQUAL_DOUBLE(42, reference->valuedouble);
+    TEST_ASSERT_EQUAL_INT(42, reference->valueint);
+    TEST_ASSERT_EQUAL_STRING("answer", reference->string);
+    assert_is_only_child(root, reference);
+
+    cJSON_Delete(root);
+    TEST_ASSERT_EQUAL_DOUBLE(42, number->valuedouble);
+    TEST_ASSERT_EQUAL_INT(cJSON_Number, number->type);
+    cJSON_Delete(number);
+}
+
+static void cjson_detach_and_replace_object_items_should_preserve_links(void)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON *first = cJSON_CreateNumber(1);
+    cJSON *second = cJSON_CreateNumber(2);
+    cJSON *replacement = cJSON_CreateNumber(3);
+    cJSON *detached = NULL;
+
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NOT_NULL(first);
+    TEST_ASSERT_NOT_NULL(second);
+    TEST_ASSERT_NOT_NULL(replacement);
+
+    TEST_ASSERT_TRUE(cJSON_AddItemToObject(root, "first", first));
+    TEST_ASSERT_TRUE(cJSON_AddItemToObject(root, "second", second));
+    TEST_ASSERT_EQUAL_PTR(first, root->child);
+    assert_head_caches_tail(root->child, second);
+
+    detached = cJSON_DetachItemFromObjectCaseSensitive(root, "first");
+    TEST_ASSERT_EQUAL_PTR(first, detached);
+    assert_not_in_list(detached);
+    assert_is_only_child(root, second);
+
+    TEST_ASSERT_TRUE(cJSON_ReplaceItemInObjectCaseSensitive(root, "second", replacement));
+    TEST_ASSERT_EQUAL_STRING("second", replacement->string);
+    assert_is_only_child(root, replacement);
+
+    cJSON_Delete(detached);
+    cJSON_Delete(root);
+}
+
+static void cjson_replace_item_in_object_should_leave_replacement_untouched_when_target_is_missing(void)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON *replacement = cJSON_CreateNumber(7);
+    char *owned_key = (char *)cJSON_malloc(strlen("owned") + 1);
+
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NOT_NULL(replacement);
+    TEST_ASSERT_NOT_NULL(owned_key);
+
+    strcpy(owned_key, "owned");
+    replacement->string = owned_key;
+
+    TEST_ASSERT_FALSE(cJSON_ReplaceItemInObjectCaseSensitive(root, "missing", replacement));
+    TEST_ASSERT_EQUAL_PTR(owned_key, replacement->string);
+    TEST_ASSERT_EQUAL_STRING("owned", replacement->string);
+    assert_has_no_const_string(replacement);
+
+    cJSON_Delete(replacement);
+    cJSON_Delete(root);
+}
+
 int CJSON_CDECL main(void)
 {
     UNITY_BEGIN();
@@ -466,6 +544,10 @@ int CJSON_CDECL main(void)
     RUN_TEST(cJSON_add_array_should_add_array);
     RUN_TEST(cjson_add_array_should_fail_with_null_pointers);
     RUN_TEST(cjson_add_array_should_fail_on_allocation_failure);
+
+    RUN_TEST(cjson_add_item_reference_to_object_should_add_reference);
+    RUN_TEST(cjson_detach_and_replace_object_items_should_preserve_links);
+    RUN_TEST(cjson_replace_item_in_object_should_leave_replacement_untouched_when_target_is_missing);
 
     return UNITY_END();
 }

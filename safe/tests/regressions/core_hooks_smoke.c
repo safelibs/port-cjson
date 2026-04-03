@@ -28,6 +28,7 @@
 
 static int tracking_malloc_calls = 0;
 static int tracking_free_calls = 0;
+static int allocations_remaining = 0;
 
 static void * CJSON_CDECL tracking_malloc(size_t size)
 {
@@ -53,6 +54,18 @@ static void * CJSON_CDECL failing_malloc(size_t size)
 static void CJSON_CDECL normal_free(void *pointer)
 {
     free(pointer);
+}
+
+static void * CJSON_CDECL limited_malloc(size_t size)
+{
+    if (allocations_remaining <= 0)
+    {
+        return NULL;
+    }
+
+    allocations_remaining--;
+    tracking_malloc_calls++;
+    return malloc(size);
 }
 
 static void cjson_version_should_match_header_macros(void)
@@ -112,6 +125,28 @@ static void cjson_hooks_should_surface_allocation_failures(void)
     cJSON_Delete(root);
 }
 
+static void cjson_custom_hooks_should_handle_print_growth_without_realloc(void)
+{
+    cJSON_Hooks hooks = { tracking_malloc, tracking_free };
+    cJSON *item = cJSON_CreateString("0123456789012345678901234567890123456789");
+    char *printed = NULL;
+
+    TEST_ASSERT_NOT_NULL(item);
+
+    tracking_malloc_calls = 0;
+    tracking_free_calls = 0;
+    cJSON_InitHooks(&hooks);
+
+    printed = cJSON_PrintBuffered(item, 1, false);
+    TEST_ASSERT_NOT_NULL(printed);
+    TEST_ASSERT_TRUE(tracking_malloc_calls >= 2);
+    cJSON_free(printed);
+    TEST_ASSERT_TRUE(tracking_free_calls >= 1);
+
+    cJSON_InitHooks(NULL);
+    cJSON_Delete(item);
+}
+
 static void cjson_reference_add_helpers_should_validate_before_allocating(void)
 {
     cJSON_Hooks hooks = { tracking_malloc, tracking_free };
@@ -136,6 +171,30 @@ static void cjson_reference_add_helpers_should_validate_before_allocating(void)
     cJSON_Delete(object);
 }
 
+static void cjson_reference_add_failure_should_release_temporary_reference(void)
+{
+    cJSON_Hooks hooks = { limited_malloc, tracking_free };
+    cJSON *object = cJSON_CreateObject();
+    cJSON *item = cJSON_CreateNumber(42);
+
+    TEST_ASSERT_NOT_NULL(object);
+    TEST_ASSERT_NOT_NULL(item);
+
+    tracking_malloc_calls = 0;
+    tracking_free_calls = 0;
+    allocations_remaining = 1;
+    cJSON_InitHooks(&hooks);
+
+    TEST_ASSERT_FALSE(cJSON_AddItemReferenceToObject(object, "value", item));
+    TEST_ASSERT_EQUAL_INT(1, tracking_malloc_calls);
+    TEST_ASSERT_EQUAL_INT(1, tracking_free_calls);
+    TEST_ASSERT_NULL(cJSON_GetObjectItemCaseSensitive(object, "value"));
+
+    cJSON_InitHooks(NULL);
+    cJSON_Delete(item);
+    cJSON_Delete(object);
+}
+
 int CJSON_CDECL main(void)
 {
     UNITY_BEGIN();
@@ -143,7 +202,9 @@ int CJSON_CDECL main(void)
     RUN_TEST(cjson_version_should_match_header_macros);
     RUN_TEST(cjson_hooks_should_route_allocations_and_reset);
     RUN_TEST(cjson_hooks_should_surface_allocation_failures);
+    RUN_TEST(cjson_custom_hooks_should_handle_print_growth_without_realloc);
     RUN_TEST(cjson_reference_add_helpers_should_validate_before_allocating);
+    RUN_TEST(cjson_reference_add_failure_should_release_temporary_reference);
 
     return UNITY_END();
 }

@@ -283,7 +283,7 @@ pub unsafe extern "C" fn cJSON_SetValuestring(
         .len();
     let new_length: usize = std::ffi::CStr::from_ptr(valuestring).to_bytes().len();
     if new_length <= old_length {
-        ptr::copy_nonoverlapping(valuestring, (*object).valuestring, new_length + 1);
+        ptr::copy(valuestring, (*object).valuestring, new_length + 1);
         return (*object).valuestring;
     }
 

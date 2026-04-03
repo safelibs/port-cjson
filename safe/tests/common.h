@@ -108,6 +108,11 @@ cleanup:
 #define assert_not_in_list(item) \
 	TEST_ASSERT_NULL_MESSAGE(item->next, "Linked list next pointer is not NULL.");\
 	TEST_ASSERT_NULL_MESSAGE(item->prev, "Linked list previous pointer is not NULL.")
+#define assert_head_caches_tail(head, tail) TEST_ASSERT_EQUAL_PTR_MESSAGE(tail, head->prev, "Head node doesn't cache the expected tail.")
+#define assert_is_only_child(parent, item) \
+	TEST_ASSERT_EQUAL_PTR_MESSAGE(item, parent->child, "Parent child doesn't point to the expected node.");\
+	TEST_ASSERT_EQUAL_PTR_MESSAGE(item, item->prev, "Single child must cache itself as the tail.");\
+	TEST_ASSERT_NULL_MESSAGE(item->next, "Single child next pointer is not NULL.")
 #define assert_has_child(item) TEST_ASSERT_NOT_NULL_MESSAGE(item->child, "Item doesn't have a child.")
 #define assert_has_no_child(item) TEST_ASSERT_NULL_MESSAGE(item->child, "Item has a child.")
 #define assert_is_invalid(item) \

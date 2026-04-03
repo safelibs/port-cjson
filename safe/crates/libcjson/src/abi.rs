@@ -47,3 +47,62 @@ pub fn bool_to_cjson(value: bool) -> cJSON_bool {
         0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::mem::{offset_of, size_of};
+    use std::os::raw::c_int;
+
+    use super::{
+        cJSON, cJSON_Array, cJSON_False, cJSON_Hooks, cJSON_Invalid, cJSON_IsReference, cJSON_NULL,
+        cJSON_Number, cJSON_Object, cJSON_Raw, cJSON_String, cJSON_StringIsConst, cJSON_True,
+        cJSON_bool,
+    };
+
+    #[test]
+    fn cjson_layout_matches_public_header() {
+        assert_eq!(size_of::<cJSON_bool>(), size_of::<c_int>());
+        assert_eq!(size_of::<cJSON_Hooks>(), size_of::<usize>() * 2);
+        assert_eq!(offset_of!(cJSON_Hooks, malloc_fn), 0);
+        assert_eq!(offset_of!(cJSON_Hooks, free_fn), size_of::<usize>());
+
+        if size_of::<usize>() == 8 {
+            assert_eq!(size_of::<cJSON>(), 64);
+            assert_eq!(offset_of!(cJSON, next), 0);
+            assert_eq!(offset_of!(cJSON, prev), 8);
+            assert_eq!(offset_of!(cJSON, child), 16);
+            assert_eq!(offset_of!(cJSON, type_), 24);
+            assert_eq!(offset_of!(cJSON, valuestring), 32);
+            assert_eq!(offset_of!(cJSON, valueint), 40);
+            assert_eq!(offset_of!(cJSON, valuedouble), 48);
+            assert_eq!(offset_of!(cJSON, string), 56);
+        } else if size_of::<usize>() == 4 {
+            assert_eq!(size_of::<cJSON>(), 36);
+            assert_eq!(offset_of!(cJSON, next), 0);
+            assert_eq!(offset_of!(cJSON, prev), 4);
+            assert_eq!(offset_of!(cJSON, child), 8);
+            assert_eq!(offset_of!(cJSON, type_), 12);
+            assert_eq!(offset_of!(cJSON, valuestring), 16);
+            assert_eq!(offset_of!(cJSON, valueint), 20);
+            assert_eq!(offset_of!(cJSON, valuedouble), 24);
+            assert_eq!(offset_of!(cJSON, string), 32);
+        } else {
+            panic!("unsupported pointer size for cJSON ABI layout tests");
+        }
+    }
+
+    #[test]
+    fn cjson_flag_constants_match_public_header() {
+        assert_eq!(cJSON_Invalid, 0);
+        assert_eq!(cJSON_False, 1);
+        assert_eq!(cJSON_True, 2);
+        assert_eq!(cJSON_NULL, 4);
+        assert_eq!(cJSON_Number, 8);
+        assert_eq!(cJSON_String, 16);
+        assert_eq!(cJSON_Array, 32);
+        assert_eq!(cJSON_Object, 64);
+        assert_eq!(cJSON_Raw, 128);
+        assert_eq!(cJSON_IsReference, 256);
+        assert_eq!(cJSON_StringIsConst, 512);
+    }
+}
