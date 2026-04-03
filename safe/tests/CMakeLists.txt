@@ -111,6 +111,9 @@ set(regression_tests
     core_layout_smoke
     core_hooks_smoke
     number_cve_2023_26819
+    dependents_parse_payloads_smoke
+    dependents_roundtrip_shapes_smoke
+    dependents_config_roundtrip_smoke
 )
 
 set(utils_unity_tests
@@ -130,6 +133,18 @@ endforeach()
 add_safe_unity_test(core_layout_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_layout_smoke.c")
 add_safe_unity_test(core_hooks_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_hooks_smoke.c")
 add_safe_unity_test(number_cve_2023_26819 "${CMAKE_CURRENT_SOURCE_DIR}/regressions/number_cve_2023_26819.c")
+add_safe_unity_test(
+    dependents_parse_payloads_smoke
+    "${CMAKE_CURRENT_SOURCE_DIR}/regressions/dependents_parse_payloads_smoke.c"
+)
+add_safe_unity_test(
+    dependents_roundtrip_shapes_smoke
+    "${CMAKE_CURRENT_SOURCE_DIR}/regressions/dependents_roundtrip_shapes_smoke.c"
+)
+add_safe_unity_test(
+    dependents_config_roundtrip_smoke
+    "${CMAKE_CURRENT_SOURCE_DIR}/regressions/dependents_config_roundtrip_smoke.c"
+)
 
 if(ENABLE_CJSON_UTILS)
     foreach(unity_test ${utils_unity_tests})
