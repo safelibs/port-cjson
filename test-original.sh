@@ -10,7 +10,7 @@ usage() {
 usage: test-original.sh [--only <source-package>]
 
 Runs a Docker-based compatibility matrix for the Ubuntu 24.04 cJSON dependents
-recorded in dependents.json, using a /usr/local install of the original cJSON.
+recorded in dependents.json, using the packaged safe cJSON build.
 
 --only limits execution to a single source package from dependents.json.
 EOF
@@ -49,7 +49,9 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
  && apt-get install -y --no-install-recommends \
       build-essential \
       ca-certificates \
+      cargo \
       cmake \
+      debhelper \
       dpkg-dev \
       file \
       jq \
@@ -60,6 +62,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
       python3 \
       python3-pkg-resources \
       ripgrep \
+      rustc \
       util-linux \
  && rm -rf /var/lib/apt/lists/*
 DOCKERFILE
@@ -76,9 +79,12 @@ set -euo pipefail
 export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 
-ROOT=/work
+READ_ONLY_ROOT=/work
+ROOT=/tmp/cjson-work
 ONLY="${CJSON_TEST_ONLY:-}"
 APT_UPDATED=0
+CJSON_MULTIARCH="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+CJSON_LIBDIR="/usr/lib/$CJSON_MULTIARCH"
 declare -A BUILD_DEPS_READY=()
 declare -A SOURCE_DIRS=()
 
@@ -92,8 +98,9 @@ die() {
 }
 
 assert_dependents_inventory() {
-  python3 - <<'PY'
+  python3 - "$ROOT/dependents.json" <<'PY'
 import json
+import sys
 from pathlib import Path
 
 expected = [
@@ -108,7 +115,7 @@ expected = [
     "snibbetracker",
 ]
 
-data = json.loads(Path("/work/dependents.json").read_text(encoding="utf-8"))
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 actual = [entry["source_package"] for entry in data["dependents"]]
 
 if actual != expected:
@@ -123,13 +130,13 @@ assert_only_filter() {
     return 0
   fi
 
-  python3 - "$ONLY" <<'PY'
+  python3 - "$ONLY" "$ROOT/dependents.json" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 name = sys.argv[1]
-data = json.loads(Path("/work/dependents.json").read_text(encoding="utf-8"))
+data = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 known = {entry["source_package"] for entry in data["dependents"]}
 if name not in known:
     raise SystemExit(f"unknown --only source package: {name}")
@@ -212,57 +219,137 @@ run_bash_logged() {
   fi
 }
 
-prepare_original_cjson() {
-  log "Building original cJSON into /usr/local"
-  run_logged /tmp/cjson-configure.log \
-    cmake -S "$ROOT/original" -B /tmp/cjson-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_CJSON_TEST=OFF
-  run_logged /tmp/cjson-build.log cmake --build /tmp/cjson-build -j"$(nproc)"
-  run_logged /tmp/cjson-install.log cmake --install /tmp/cjson-build
-  ldconfig
-
-  export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-  export LD_LIBRARY_PATH="/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-  export CMAKE_PREFIX_PATH="/usr/local${CMAKE_PREFIX_PATH:+;$CMAKE_PREFIX_PATH}"
-
-  find /usr/local -name 'libcjson.so*' | grep -F 'libcjson.so' >/dev/null || die "original cJSON install did not produce libcjson shared libraries"
+prepare_writable_root() {
+  log "Copying repository into a writable workspace"
+  rm -rf "$ROOT"
+  mkdir -p "$ROOT"
+  cp -a "$READ_ONLY_ROOT/." "$ROOT/"
 }
 
-assert_links_to_original() {
-  local target="$1"
+assert_owned_by_package() {
+  local package_name="$1"
+  local path="$2"
+  local canonical_path=""
 
-  [[ -e "$target" ]] || die "missing binary or library to inspect: $target"
-  ldd "$target" 2>/dev/null | grep -F '/usr/local/' | grep -F 'libcjson.so' >/dev/null || {
-    echo "expected $target to resolve libcjson from /usr/local" >&2
-    ldd "$target" >&2 || true
-    return 1
-  }
-}
+  if dpkg -S "$path" 2>/dev/null | grep -E "^${package_name}(:[[:alnum:]-]+)?: " >/dev/null; then
+    return 0
+  fi
 
-find_linked_artifact() {
-  local root="$1"
-  local candidate=""
+  canonical_path="$(readlink -f "$path")"
+  if dpkg -S "$canonical_path" 2>/dev/null | grep -E "^${package_name}(:[[:alnum:]-]+)?: " >/dev/null; then
+    return 0
+  fi
 
-  while IFS= read -r -d '' candidate; do
-    if ldd "$candidate" 2>/dev/null | grep -F '/usr/local/' | grep -F 'libcjson.so' >/dev/null 2>&1; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done < <(find "$root" -type f \( -perm -111 -o -name '*.so' -o -name '*.so.*' \) -print0 2>/dev/null)
-
+  echo "expected $path to be owned by $package_name" >&2
+  dpkg -S "$path" >&2 || true
+  if [[ "$canonical_path" != "$path" ]]; then
+    dpkg -S "$canonical_path" >&2 || true
+  fi
   return 1
 }
 
-assert_any_tree_links_to_original() {
-  local root="$1"
-  local label="$2"
-  local artifact=""
+assert_safe_packages_installed() {
+  local runtime_matches=()
+  local utils_matches=()
+  local path=""
+  local dev_paths=(
+    "/usr/include/cjson/cJSON.h"
+    "/usr/include/cjson/cJSON_Utils.h"
+    "$CJSON_LIBDIR/libcjson.so"
+    "$CJSON_LIBDIR/libcjson_utils.so"
+    "$CJSON_LIBDIR/pkgconfig/libcjson.pc"
+    "$CJSON_LIBDIR/pkgconfig/libcjson_utils.pc"
+    "$CJSON_LIBDIR/cmake/cJSON/cJSONConfig.cmake"
+    "$CJSON_LIBDIR/cmake/cJSON/cJSONConfigVersion.cmake"
+    "$CJSON_LIBDIR/cmake/cJSON/cjson.cmake"
+    "$CJSON_LIBDIR/cmake/cJSON/cjson_utils.cmake"
+  )
 
-  artifact="$(find_linked_artifact "$root")" || {
-    echo "expected at least one $label artifact in $root to resolve libcjson from /usr/local" >&2
+  dpkg-query -W -f='${Status}\n' libcjson1 | grep -Fx 'install ok installed' >/dev/null \
+    || die "libcjson1 is not installed"
+  dpkg-query -W -f='${Status}\n' libcjson-dev | grep -Fx 'install ok installed' >/dev/null \
+    || die "libcjson-dev is not installed"
+
+  mapfile -t runtime_matches < <(compgen -G "$CJSON_LIBDIR/libcjson.so.1*")
+  mapfile -t utils_matches < <(compgen -G "$CJSON_LIBDIR/libcjson_utils.so.1*")
+
+  [[ "${#runtime_matches[@]}" -gt 0 ]] || die "runtime package did not install libcjson.so.1* under $CJSON_LIBDIR"
+  [[ "${#utils_matches[@]}" -gt 0 ]] || die "runtime package did not install libcjson_utils.so.1* under $CJSON_LIBDIR"
+
+  for path in "${runtime_matches[@]}" "${utils_matches[@]}"; do
+    [[ -e "$path" ]] || die "missing runtime package path: $path"
+    assert_owned_by_package libcjson1 "$path"
+  done
+
+  for path in "${dev_paths[@]}"; do
+    [[ -e "$path" ]] || die "missing development package path: $path"
+    assert_owned_by_package libcjson-dev "$path"
+  done
+
+  [[ -L "$CJSON_LIBDIR/libcjson.so" ]] || die "libcjson-dev did not install libcjson.so as a symlink"
+  [[ -L "$CJSON_LIBDIR/libcjson_utils.so" ]] || die "libcjson-dev did not install libcjson_utils.so as a symlink"
+  [[ -L "$CJSON_LIBDIR/libcjson.so.1" ]] || die "libcjson1 did not install libcjson.so.1 as a symlink"
+  [[ -L "$CJSON_LIBDIR/libcjson_utils.so.1" ]] || die "libcjson1 did not install libcjson_utils.so.1 as a symlink"
+
+  pkg-config --cflags libcjson | grep -F -- '-I/usr/include/cjson' >/dev/null \
+    || die "pkg-config did not advertise /usr/include/cjson for libcjson"
+  pkg-config --libs libcjson | grep -F -- '-lcjson' >/dev/null \
+    || die "pkg-config did not advertise -lcjson"
+}
+
+build_and_install_safe_cjson_packages() {
+  local build_work="/tmp/cjson-deb-build"
+  local artifact_dir=""
+  local debs=()
+
+  log "Building and installing packaged safe cJSON"
+  rm -rf "$build_work"
+  if ! "$ROOT/safe/scripts/build-debs.sh" "$build_work" >/tmp/cjson-build-debs.log 2>&1; then
+    cat /tmp/cjson-build-debs.log >&2
+    return 1
+  fi
+
+  artifact_dir="$(tail -n1 /tmp/cjson-build-debs.log)"
+  [[ -d "$artifact_dir" ]] || die "safe package builder did not report a valid artifact directory"
+
+  mapfile -t debs < <(find "$artifact_dir" -maxdepth 1 -type f -name '*.deb' | sort)
+  [[ "${#debs[@]}" -gt 0 ]] || die "safe package builder did not produce any .deb artifacts"
+
+  run_logged /tmp/cjson-package-install.log dpkg -i "${debs[@]}"
+  ldconfig
+  assert_safe_packages_installed
+}
+
+resolve_cjson_paths() {
+  local target="$1"
+
+  ldd "$target" 2>/dev/null | awk '/libcjson(_utils)?\.so/ && $3 ~ /^\// { print $3 }'
+}
+
+assert_links_to_packaged_safe() {
+  local target="$1"
+  local resolved_paths=()
+  local canonical_path=""
+  local path=""
+
+  [[ -e "$target" ]] || die "missing binary or library to inspect: $target"
+  mapfile -t resolved_paths < <(resolve_cjson_paths "$target")
+
+  [[ "${#resolved_paths[@]}" -gt 0 ]] || {
+    echo "expected $target to resolve libcjson from the packaged safe library" >&2
+    ldd "$target" >&2 || true
     return 1
   }
 
-  printf 'linked %s artifact: %s\n' "$label" "$artifact"
+  for path in "${resolved_paths[@]}"; do
+    canonical_path="$(readlink -f "$path")"
+    [[ "$canonical_path" == /usr/lib/*/libcjson.so* || "$canonical_path" == /usr/lib/*/libcjson_utils.so* || \
+       "$canonical_path" == /lib/*/libcjson.so* || "$canonical_path" == /lib/*/libcjson_utils.so* ]] || {
+      echo "expected $target to resolve libcjson from the packaged library paths, found $path" >&2
+      return 1
+    }
+    assert_owned_by_package libcjson1 "$path"
+  done
 }
 
 prepare_tester_user() {
@@ -314,7 +401,6 @@ test_freerdp3() {
   run_logged /tmp/freerdp3-configure.log \
     cmake -S "$src" -B "$build_dir" -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_PREFIX_PATH=/usr/local \
       -DBUILD_TESTING=OFF \
       -DWITH_AAD=ON \
       -DWITH_MANPAGES=OFF \
@@ -334,8 +420,8 @@ test_freerdp3() {
   [[ -n "$sfreerdp_bin" ]] || die "freerdp3 SDL client was not built"
   lib_path="$(find "$build_dir/libfreerdp" -maxdepth 1 -name 'libfreerdp3.so*' | head -n1)"
   [[ -n "$lib_path" ]] || die "freerdp3 core library was not built"
-  assert_links_to_original "$sfreerdp_bin"
-  assert_links_to_original "$lib_path"
+  assert_links_to_packaged_safe "$sfreerdp_bin"
+  assert_links_to_packaged_safe "$lib_path"
 }
 
 test_librist() {
@@ -343,7 +429,7 @@ test_librist() {
 
   log "librist: exercising sender statistics JSON output through rist-tools"
   install_packages rist-tools
-  assert_links_to_original "$(command -v ristreceiver)"
+  assert_links_to_packaged_safe "$(command -v ristreceiver)"
 
   (
     set -euo pipefail
@@ -586,7 +672,6 @@ EOF
   run_logged /tmp/monado-configure.log \
     cmake -S "$src" -B "$build_dir" -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_PREFIX_PATH=/usr/local \
       -DBUILD_TESTING=ON \
       -DXRT_HAVE_SYSTEM_CJSON=ON \
       -DXRT_BUILD_DRIVER_ANDROID=OFF \
@@ -620,10 +705,10 @@ EOF
   test -x "$cli_bin" || die "monado-cli was not built"
   test -x "$gui_bin" || die "monado-gui was not built"
   test -x "$service_bin" || die "monado-service was not built"
-  assert_links_to_original "$runtime_smoke"
-  assert_links_to_original "$cli_bin"
-  assert_links_to_original "$gui_bin"
-  assert_links_to_original "$service_bin"
+  assert_links_to_packaged_safe "$runtime_smoke"
+  assert_links_to_packaged_safe "$cli_bin"
+  assert_links_to_packaged_safe "$gui_bin"
+  assert_links_to_packaged_safe "$service_bin"
   run_logged /tmp/monado-runtime-smoke.log "$runtime_smoke"
   grep -Fx 'monado-json-ok' /tmp/monado-runtime-smoke.log >/dev/null
 }
@@ -635,9 +720,9 @@ test_mosquitto() {
 
   log "mosquitto: exercising dynamic-security JSON persistence and mosquitto_sub JSON formatting"
   install_packages mosquitto mosquitto-clients
-  assert_links_to_original "$(command -v mosquitto_sub)"
+  assert_links_to_packaged_safe "$(command -v mosquitto_sub)"
   test -f "$dynsec_plugin" || die "mosquitto dynamic-security plugin was not installed"
-  assert_links_to_original "$dynsec_plugin"
+  assert_links_to_packaged_safe "$dynsec_plugin"
 
   (
     set -euo pipefail
@@ -737,7 +822,7 @@ test_ocp() {
 
   lib_path="$src/libocp.so"
   test -f "$lib_path" || die "ocp build did not produce libocp.so"
-  assert_links_to_original "$lib_path"
+  assert_links_to_packaged_safe "$lib_path"
 
   log "ocp: exercising cached MusicBrainz JSON parsing through musicbrainz.c"
   run_bash_logged /tmp/ocp-musicbrainz-build.log "
@@ -846,7 +931,7 @@ EOF
       /tmp/ocp-musicbrainz-smoke.c \
       \$(pkg-config --libs libcjson) -Wl,--gc-sections -o /tmp/ocp-musicbrainz-smoke
   "
-  assert_links_to_original /tmp/ocp-musicbrainz-smoke
+  assert_links_to_packaged_safe /tmp/ocp-musicbrainz-smoke
   run_logged /tmp/ocp-musicbrainz.log /tmp/ocp-musicbrainz-smoke
   grep -Fx 'Test Album' /tmp/ocp-musicbrainz.log >/dev/null
   grep -Fx 'First Track' /tmp/ocp-musicbrainz.log >/dev/null
@@ -879,7 +964,7 @@ test_oidc_agent() {
 
   agent_bin="$src/bin/oidc-agent"
   test -x "$agent_bin" || die "oidc-agent binary was not built"
-  assert_links_to_original "$agent_bin"
+  assert_links_to_packaged_safe "$agent_bin"
 
   cat > /tmp/oidc-json-smoke.c <<'EOF'
 #include <stdarg.h>
@@ -1061,7 +1146,7 @@ EOF
       \$(pkg-config --libs libcjson) -Wl,--gc-sections -o '$runtime_smoke'
   "
 
-  assert_links_to_original "$runtime_smoke"
+  assert_links_to_packaged_safe "$runtime_smoke"
   run_logged /tmp/oidc-agent-runtime-smoke.log "$runtime_smoke"
   grep -Fx 'oidc-json-ok' /tmp/oidc-agent-runtime-smoke.log >/dev/null
 }
@@ -1072,7 +1157,7 @@ test_pgagroal() {
   log "pgagroal: exercising JSON management commands"
   install_packages pgagroal
   prepare_tester_user
-  assert_links_to_original "$(command -v pgagroal-cli)"
+  assert_links_to_packaged_safe "$(command -v pgagroal-cli)"
 
   mkdir -p /home/tester/pgagroal/run
   chown -R tester:tester /home/tester/pgagroal
@@ -1134,7 +1219,7 @@ test_qad() {
   run_logged /tmp/qad-build.log meson compile -C "$build_dir"
 
   test -x "$build_dir/qad" || die "qad binary was not built"
-  assert_links_to_original "$build_dir/qad"
+  assert_links_to_packaged_safe "$build_dir/qad"
   run_logged /tmp/qad-help.log "$build_dir/qad" --help
   grep -F -- '--port' /tmp/qad-help.log >/dev/null
 
@@ -1254,7 +1339,7 @@ EOF
     cc -Dmain=qad_server_main -I'$src/include' -I'$src/src' -I'$build_dir' -c '$src/src/server.c' -o /tmp/qad-server.o
     cc -I'$src/include' -I'$src/src' -I'$build_dir' /tmp/qad-json-smoke.c /tmp/qad-server.o -lmicrohttpd -lcjson -o /tmp/qad-json-smoke
   "
-  assert_links_to_original /tmp/qad-json-smoke
+  assert_links_to_packaged_safe /tmp/qad-json-smoke
   run_logged /tmp/qad-json-smoke.log /tmp/qad-json-smoke
   grep -Fx 'qad-json-ok' /tmp/qad-json-smoke.log >/dev/null
 }
@@ -1334,16 +1419,17 @@ EOF
 
   binary="$src/snibbetracker/src/snibbetracker"
   test -x "$binary" || die "snibbetracker binary was not built"
-  assert_links_to_original "$binary"
-  assert_links_to_original /tmp/snibbetracker-smoke
+  assert_links_to_packaged_safe "$binary"
+  assert_links_to_packaged_safe /tmp/snibbetracker-smoke
   run_logged /tmp/snibbetracker-smoke.json /tmp/snibbetracker-smoke
   jq -e '.file_version == 4 and (.patterns | type == "array") and (.nodes | type == "array")' \
     /tmp/snibbetracker-smoke.json >/dev/null
 }
 
+prepare_writable_root
 assert_dependents_inventory
 assert_only_filter
-prepare_original_cjson
+build_and_install_safe_cjson_packages
 
 test_freerdp3
 test_librist

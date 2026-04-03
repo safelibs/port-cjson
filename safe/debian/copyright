@@ -8,9 +8,11 @@ License: MIT
 
 Files: debian/*
 Copyright: 2018, Yanhao Mo <yanhaocs@gmail.com>
+           2026, SafeLibs contributors
 License: MIT
 
 Files: CMakeLists.txt
+       Cargo.lock
        Cargo.toml
        cJSON.h
        cJSON_Utils.h
@@ -19,6 +21,7 @@ Files: CMakeLists.txt
        library_config/*
        scripts/*
        tests/CMakeLists.txt
+       tests/perf/*
 Copyright: 2026, SafeLibs contributors
 License: MIT
 

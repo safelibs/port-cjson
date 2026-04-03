@@ -37,7 +37,7 @@ pub struct cJSON {
     pub string: *mut c_char,
 }
 
-unsafe extern "C" {
+extern "C" {
     fn cJSON_CreateArray() -> *mut cJSON;
     fn cJSON_CreateNull() -> *mut cJSON;
     fn cJSON_CreateObject() -> *mut cJSON;

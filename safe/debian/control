@@ -6,6 +6,7 @@ Build-Depends:
  cargo,
  cmake,
  debhelper-compat (= 13),
+ ninja-build,
  rustc,
 Rules-Requires-Root: no
 Standards-Version: 4.6.2

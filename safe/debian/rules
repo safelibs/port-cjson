@@ -1,5 +1,10 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE = 1
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+UPSTREAM_VERSION := $(shell dpkg-parsechangelog -SVersion | sed 's/-[^-]*$$//')
+LIBDIR := debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)
+
+export PATH := /usr/bin:/bin:$(PATH)
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export DEB_LDFLAGS_MAINT_APPEND =
 
@@ -10,4 +15,14 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 	        -DENABLE_CJSON_UTILS=On \
 	        -DENABLE_CJSON_TEST=Off \
+	        -DENABLE_LOCALES=On \
 	        $(NULL)
+
+override_dh_auto_install:
+	dh_auto_install
+	rm -f $(LIBDIR)/libcjson.so $(LIBDIR)/libcjson.so.1
+	ln -s libcjson.so.$(UPSTREAM_VERSION) $(LIBDIR)/libcjson.so.1
+	ln -s libcjson.so.1 $(LIBDIR)/libcjson.so
+	rm -f $(LIBDIR)/libcjson_utils.so $(LIBDIR)/libcjson_utils.so.1
+	ln -s libcjson_utils.so.$(UPSTREAM_VERSION) $(LIBDIR)/libcjson_utils.so.1
+	ln -s libcjson_utils.so.1 $(LIBDIR)/libcjson_utils.so

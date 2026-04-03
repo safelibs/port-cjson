@@ -1,9 +1,11 @@
 cjson (1.7.17-1safelibs1) UNRELEASED; urgency=medium
 
-  * Seed the Rust compatibility scaffold, mirrored test tree, ABI maps,
-    install verifiers, and Debian packaging skeleton.
+  * Build Ubuntu-compatible Debian packages with the distro cargo/rustc
+    toolchain and keep locale-aware parsing enabled in the packaged build.
+  * Add a canonical deb build helper and switch the dependent harness to
+    install the packaged safe libraries instead of a /usr/local build.
 
- -- SafeLibs Maintainers <maintainers@safelibs.invalid>  Fri, 03 Apr 2026 12:00:00 -0700
+ -- SafeLibs Maintainers <maintainers@safelibs.invalid>  Fri, 03 Apr 2026 13:05:00 -0700
 
 cjson (1.7.17-1) unstable; urgency=medium
 

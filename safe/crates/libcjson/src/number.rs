@@ -11,7 +11,7 @@ const FORMAT_INTEGER: &[u8] = b"%d\0";
 const FORMAT_DOUBLE_15: &[u8] = b"%1.15g\0";
 const FORMAT_DOUBLE_17: &[u8] = b"%1.17g\0";
 
-unsafe extern "C" {
+extern "C" {
     fn snprintf(buffer: *mut c_char, bufsz: usize, format: *const c_char, ...) -> c_int;
     fn strtod(string: *const c_char, end: *mut *mut c_char) -> c_double;
 }
@@ -23,7 +23,7 @@ struct lconv_prefix {
 }
 
 #[cfg(cjson_enable_locales)]
-unsafe extern "C" {
+extern "C" {
     fn localeconv() -> *mut lconv_prefix;
 }
 

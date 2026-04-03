@@ -5,7 +5,7 @@ use std::ptr;
 
 use crate::abi::{cJSON, cJSON_Hooks, free_fn, malloc_fn, realloc_fn};
 
-unsafe extern "C" {
+extern "C" {
     fn malloc(size: usize) -> *mut c_void;
     fn free(pointer: *mut c_void);
     fn realloc(pointer: *mut c_void, size: usize) -> *mut c_void;
