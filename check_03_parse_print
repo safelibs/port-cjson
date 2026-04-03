@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOUNCE_TARGET=impl_03_parse_print
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+cd "$REPO_ROOT"
+
+cmake -S safe -B /tmp/cjson-safe-parse-print -G Ninja -DENABLE_CJSON_UTILS=OFF -DENABLE_CJSON_TEST=ON -DENABLE_LOCALES=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build /tmp/cjson-safe-parse-print -j"$(nproc)"
+ctest --test-dir /tmp/cjson-safe-parse-print --output-on-failure -R 'parse_examples|parse_number|parse_hex4|parse_string|parse_array|parse_object|parse_value|parse_with_opts|print_string|print_number|print_array|print_object|print_value|misc_tests|compare_tests|minify_tests|readme_examples|public_api_coverage|cJSON_test|number_cve_2023_26819'
+cmake -S original -B /tmp/cjson-original-locale-on -G Ninja -DENABLE_CJSON_UTILS=OFF -DENABLE_CJSON_TEST=OFF -DENABLE_LOCALES=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build /tmp/cjson-original-locale-on -j"$(nproc)"
+cmake -S original -B /tmp/cjson-original-locale-off -G Ninja -DENABLE_CJSON_UTILS=OFF -DENABLE_CJSON_TEST=OFF -DENABLE_LOCALES=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build /tmp/cjson-original-locale-off -j"$(nproc)"
+cmake -S safe -B /tmp/cjson-safe-locale-on -G Ninja -DENABLE_CJSON_UTILS=OFF -DENABLE_CJSON_TEST=OFF -DENABLE_LOCALES=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build /tmp/cjson-safe-locale-on -j"$(nproc)"
+cmake -S safe -B /tmp/cjson-safe-locale-off -G Ninja -DENABLE_CJSON_UTILS=OFF -DENABLE_CJSON_TEST=OFF -DENABLE_LOCALES=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build /tmp/cjson-safe-locale-off -j"$(nproc)"
+"$REPO_ROOT/safe/scripts/check-locale-compat.sh" /tmp/cjson-original-locale-on /tmp/cjson-original-locale-off /tmp/cjson-safe-locale-on /tmp/cjson-safe-locale-off

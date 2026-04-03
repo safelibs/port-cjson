@@ -39,10 +39,10 @@ if(ENABLE_VALGRIND)
     endif()
 endif()
 
-function(add_safe_unity_test test_name source_file)
-    add_executable("${test_name}" "${source_file}")
+function(add_safe_test test_name)
+    add_executable("${test_name}" "${ARGN}")
     target_include_directories("${test_name}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
-    target_link_libraries("${test_name}" PRIVATE "${CJSON_CORE_SHARED_OUTPUT}" unity)
+    target_link_libraries("${test_name}" PRIVATE "${CJSON_CORE_SHARED_OUTPUT}")
     if(NOT WIN32)
         target_link_libraries("${test_name}" PRIVATE m)
     endif()
@@ -58,16 +58,61 @@ function(add_safe_unity_test test_name source_file)
     endif()
 endfunction()
 
-set(core_tree_tests
+function(add_safe_unity_test test_name source_file)
+    add_safe_test("${test_name}" "${source_file}")
+    target_link_libraries("${test_name}" PRIVATE unity)
+    if("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+        target_sources("${test_name}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/unity_setup.c")
+    endif()
+endfunction()
+
+set(upstream_non_utils_tests
+    parse_examples
+    parse_number
+    parse_hex4
+    parse_string
+    parse_array
+    parse_object
+    parse_value
+    print_string
+    print_number
+    print_array
+    print_object
+    print_value
+    misc_tests
+    parse_with_opts
+    compare_tests
     cjson_add
-    core_layout_smoke
-    core_hooks_smoke
+    readme_examples
+    minify_tests
+    public_api_coverage
 )
 
-add_safe_unity_test(cjson_add "${CMAKE_CURRENT_SOURCE_DIR}/cjson_add.c")
+set(regression_tests
+    core_layout_smoke
+    core_hooks_smoke
+    number_cve_2023_26819
+)
+
+foreach(unity_test ${upstream_non_utils_tests})
+    add_safe_unity_test("${unity_test}" "${CMAKE_CURRENT_SOURCE_DIR}/${unity_test}.c")
+endforeach()
+
 add_safe_unity_test(core_layout_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_layout_smoke.c")
 add_safe_unity_test(core_hooks_smoke "${CMAKE_CURRENT_SOURCE_DIR}/regressions/core_hooks_smoke.c")
+add_safe_unity_test(number_cve_2023_26819 "${CMAKE_CURRENT_SOURCE_DIR}/regressions/number_cve_2023_26819.c")
+
+add_safe_test(cJSON_test "${CMAKE_CURRENT_SOURCE_DIR}/../test.c")
+if(FLAG_SUPPORTED_fsanitizefloatdividebyzero)
+    target_compile_options(cJSON_test PRIVATE "-fno-sanitize=float-divide-by-zero")
+endif()
+
+set(all_safe_tests
+    ${upstream_non_utils_tests}
+    ${regression_tests}
+    cJSON_test
+)
 
 add_custom_target(check
     COMMAND "${CMAKE_CTEST_COMMAND}" --output-on-failure)
-add_dependencies(check ${core_tree_tests})
+add_dependencies(check ${all_safe_tests})
