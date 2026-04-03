@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOUNCE_TARGET=impl_01_scaffold
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+cd "$REPO_ROOT"
+
+cargo check --manifest-path safe/Cargo.toml
+"$REPO_ROOT/safe/scripts/check-build-contract.sh"
+"$REPO_ROOT/safe/scripts/check-abi.sh"

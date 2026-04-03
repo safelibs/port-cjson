@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "crates/libcjson",
+    "crates/libcjson_utils",
+]
+resolver = "2"
+
+[workspace.package]
+version = "1.7.17"
+edition = "2021"
+license = "MIT"

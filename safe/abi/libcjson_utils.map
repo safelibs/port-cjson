@@ -1,0 +1,19 @@
+LIBCJSON_UTILS_1.7.17 {
+  global:
+    cJSONUtils_AddPatchToArray;
+    cJSONUtils_ApplyPatches;
+    cJSONUtils_ApplyPatchesCaseSensitive;
+    cJSONUtils_FindPointerFromObjectTo;
+    cJSONUtils_GenerateMergePatch;
+    cJSONUtils_GenerateMergePatchCaseSensitive;
+    cJSONUtils_GeneratePatches;
+    cJSONUtils_GeneratePatchesCaseSensitive;
+    cJSONUtils_GetPointer;
+    cJSONUtils_GetPointerCaseSensitive;
+    cJSONUtils_MergePatch;
+    cJSONUtils_MergePatchCaseSensitive;
+    cJSONUtils_SortObject;
+    cJSONUtils_SortObjectCaseSensitive;
+  local:
+    *;
+};

@@ -1,0 +1,10 @@
+[package]
+name = "safe-libcjson"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[lib]
+name = "cjson"
+crate-type = ["cdylib", "staticlib"]
