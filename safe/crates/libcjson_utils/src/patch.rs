@@ -27,6 +27,20 @@ const MOVE_OP: &[u8] = b"move";
 const COPY_OP: &[u8] = b"copy";
 const TEST_OP: &[u8] = b"test";
 
+const STATUS_SUCCESS: c_int = 0;
+const STATUS_MALFORMED_PATCHES: c_int = 1;
+const STATUS_MALFORMED_PATCH: c_int = 2;
+const STATUS_INVALID_OPERATION: c_int = 3;
+const STATUS_MISSING_FROM: c_int = 4;
+const STATUS_INVALID_FROM: c_int = 5;
+const STATUS_COPY_MOVE_OOM: c_int = 6;
+const STATUS_MISSING_VALUE: c_int = 7;
+const STATUS_ADD_REPLACE_OOM: c_int = 8;
+const STATUS_INVALID_TARGET: c_int = 9;
+const STATUS_ARRAY_INDEX_OOB: c_int = 10;
+const STATUS_INVALID_ARRAY_INDEX: c_int = 11;
+const STATUS_MISSING_TARGET: c_int = 13;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PatchOperation {
     Invalid,
@@ -194,20 +208,20 @@ fn split_parent_child(path: &[u8]) -> Option<(&[u8], &[u8])> {
 unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: bool) -> c_int {
     let path = get_patch_member(patch, PATH_KEY, case_sensitive);
     let mut value: *mut cJSON;
-    let mut status = 0;
+    let mut status = STATUS_SUCCESS;
 
     if object.is_null() {
-        return 9;
+        return STATUS_INVALID_TARGET;
     }
 
     if !is_string(path) || (*path).valuestring.is_null() {
-        return 2;
+        return STATUS_MALFORMED_PATCH;
     }
 
     let path_bytes = bytes_from_c_string((*path).valuestring);
     let opcode = decode_patch_operation(patch, case_sensitive);
     if opcode == PatchOperation::Invalid {
-        return 3;
+        return STATUS_INVALID_OPERATION;
     }
 
     if opcode == PatchOperation::Test {
@@ -216,7 +230,7 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
             get_patch_member(patch, VALUE_KEY, case_sensitive),
             case_sensitive,
         ) {
-            0
+            STATUS_SUCCESS
         } else {
             1
         };
@@ -236,19 +250,19 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
             };
 
             overwrite_item(object, invalid);
-            return 0;
+            return STATUS_SUCCESS;
         }
 
         if opcode == PatchOperation::Replace || opcode == PatchOperation::Add {
             let replacement = get_patch_member(patch, VALUE_KEY, case_sensitive);
 
             if replacement.is_null() {
-                return 7;
+                return STATUS_MISSING_VALUE;
             }
 
             let duplicated = cJSON_Duplicate(replacement, 1);
             if duplicated.is_null() {
-                return 8;
+                return STATUS_ADD_REPLACE_OOM;
             }
 
             let replacement_item = ptr::read(duplicated);
@@ -263,19 +277,19 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
                 (*object).type_ &= !cJSON_StringIsConst;
             }
 
-            return 0;
+            return STATUS_SUCCESS;
         }
     }
 
     if opcode == PatchOperation::Remove || opcode == PatchOperation::Replace {
         let old_item = detach_path_bytes(object, path_bytes, case_sensitive);
         if old_item.is_null() {
-            return 13;
+            return STATUS_MISSING_TARGET;
         }
 
         cJSON_Delete(old_item);
         if opcode == PatchOperation::Remove {
-            return 0;
+            return STATUS_SUCCESS;
         }
     }
 
@@ -288,7 +302,7 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
         };
 
         if from.is_null() {
-            return 4;
+            return STATUS_MISSING_FROM;
         }
 
         value = match (opcode, from_bytes) {
@@ -302,7 +316,7 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
         };
 
         if value.is_null() {
-            return 5;
+            return STATUS_INVALID_FROM;
         }
 
         if opcode == PatchOperation::Copy {
@@ -310,17 +324,17 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
         }
 
         if value.is_null() {
-            return 6;
+            return STATUS_COPY_MOVE_OOM;
         }
     } else {
         value = get_patch_member(patch, VALUE_KEY, case_sensitive);
         if value.is_null() {
-            return 7;
+            return STATUS_MISSING_VALUE;
         }
 
         value = cJSON_Duplicate(value, 1);
         if value.is_null() {
-            return 8;
+            return STATUS_ADD_REPLACE_OOM;
         }
     }
 
@@ -330,14 +344,14 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
             let decoded_child = match decode_pointer_token(child_pointer) {
                 Some(decoded_child) => decoded_child,
                 None => {
-                    status = 9;
+                    status = STATUS_INVALID_TARGET;
                     goto_cleanup(&mut value);
                     return status;
                 }
             };
 
             if parent.is_null() {
-                status = 9;
+                status = STATUS_INVALID_TARGET;
             } else if is_array(parent) {
                 if decoded_child == b"-" {
                     cJSON_AddItemToArray(parent, value);
@@ -346,14 +360,14 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
                     let index = match decode_array_index_from_pointer(&decoded_child) {
                         Some(index) => index,
                         None => {
-                            status = 11;
+                            status = STATUS_INVALID_ARRAY_INDEX;
                             goto_cleanup(&mut value);
                             return status;
                         }
                     };
 
                     if !insert_item_in_array(parent, index, value) {
-                        status = 10;
+                        status = STATUS_ARRAY_INDEX_OOB;
                     } else {
                         value = ptr::null_mut();
                     }
@@ -372,10 +386,10 @@ unsafe fn apply_patch(object: *mut cJSON, patch: *const cJSON, case_sensitive: b
                 cJSON_AddItemToObject(parent, child_name.as_ptr() as *const c_char, value);
                 value = ptr::null_mut();
             } else {
-                status = 9;
+                status = STATUS_INVALID_TARGET;
             }
         }
-        None => status = 9,
+        None => status = STATUS_INVALID_TARGET,
     }
 
     goto_cleanup(&mut value);
@@ -630,18 +644,18 @@ pub(crate) unsafe fn apply_patches(
     let mut current_patch;
 
     if !is_array(patches) {
-        return 1;
+        return STATUS_MALFORMED_PATCHES;
     }
 
     current_patch = (*patches).child;
     while !current_patch.is_null() {
         let status = apply_patch(object, current_patch, case_sensitive);
-        if status != 0 {
+        if status != STATUS_SUCCESS {
             return status;
         }
 
         current_patch = (*current_patch).next;
     }
 
-    0
+    STATUS_SUCCESS
 }

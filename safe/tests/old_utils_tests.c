@@ -211,6 +211,34 @@ static void generate_merge_tests(void)
     }
 }
 
+static void generate_merge_patch_case_sensitive_should_preserve_nested_key_case(void)
+{
+    cJSON *from = cJSON_Parse("{\"outer\":{\"A\":1}}");
+    cJSON *to = cJSON_Parse("{\"outer\":{\"a\":1}}");
+    cJSON *expected_patch = cJSON_Parse("{\"outer\":{\"A\":null,\"a\":1}}");
+    cJSON *patch = NULL;
+    cJSON *applied = cJSON_Parse("{\"outer\":{\"A\":1}}");
+
+    TEST_ASSERT_NOT_NULL(from);
+    TEST_ASSERT_NOT_NULL(to);
+    TEST_ASSERT_NOT_NULL(expected_patch);
+    TEST_ASSERT_NOT_NULL(applied);
+
+    patch = cJSONUtils_GenerateMergePatchCaseSensitive(from, to);
+    TEST_ASSERT_NOT_NULL(patch);
+    TEST_ASSERT_TRUE(cJSON_Compare(patch, expected_patch, true));
+
+    applied = cJSONUtils_MergePatchCaseSensitive(applied, patch);
+    TEST_ASSERT_NOT_NULL(applied);
+    TEST_ASSERT_TRUE(cJSON_Compare(applied, to, true));
+
+    cJSON_Delete(from);
+    cJSON_Delete(to);
+    cJSON_Delete(expected_patch);
+    cJSON_Delete(patch);
+    cJSON_Delete(applied);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -220,6 +248,7 @@ int main(void)
     RUN_TEST(sort_tests);
     RUN_TEST(merge_tests);
     RUN_TEST(generate_merge_tests);
+    RUN_TEST(generate_merge_patch_case_sensitive_should_preserve_nested_key_case);
 
     return UNITY_END();
 }

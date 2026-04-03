@@ -47,6 +47,8 @@ pub(crate) fn decode_pointer_token(token: &[u8]) -> Option<Vec<u8>> {
     Some(output)
 }
 
+// This is the single array-index parser used by pointer lookup, detach, and patch
+// application so malformed tokens fail the same way everywhere.
 pub(crate) fn decode_array_index_from_pointer(token: &[u8]) -> Option<usize> {
     let mut parsed_index = 0usize;
     let mut position = 0usize;
