@@ -303,6 +303,9 @@ if(ENABLE_CJSON_UTILS)
     add_dependencies(cjson-utils-artifacts cjson-core-artifacts)
 endif()
 
+set(CJSON_PC_LIBDIR "${CMAKE_INSTALL_FULL_LIBDIR}")
+set(CJSON_PC_INCLUDEDIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
+
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/library_config/libcjson.pc.in"
     "${CMAKE_CURRENT_BINARY_DIR}/libcjson.pc"
@@ -314,6 +317,35 @@ if(ENABLE_CJSON_UTILS)
         "${CMAKE_CURRENT_BINARY_DIR}/libcjson_utils.pc"
         @ONLY)
 endif()
+
+function(install_pkgconfig_template template_path output_name)
+    set(_install_code_template [=[
+if(DEFINED ENV{DESTDIR} AND NOT "$ENV{DESTDIR}" STREQUAL "")
+    set(_pkgconfig_stage_prefix "$ENV{DESTDIR}")
+else()
+    set(_pkgconfig_stage_prefix "")
+endif()
+
+if(IS_ABSOLUTE "@CMAKE_INSTALL_LIBDIR@")
+    set(CJSON_PC_LIBDIR "@CMAKE_INSTALL_LIBDIR@")
+    set(_pkgconfig_output_dir "${_pkgconfig_stage_prefix}@CMAKE_INSTALL_LIBDIR@/pkgconfig")
+else()
+    set(CJSON_PC_LIBDIR "${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+    set(_pkgconfig_output_dir "${_pkgconfig_stage_prefix}${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@/pkgconfig")
+endif()
+
+if(IS_ABSOLUTE "@CMAKE_INSTALL_INCLUDEDIR@")
+    set(CJSON_PC_INCLUDEDIR "@CMAKE_INSTALL_INCLUDEDIR@")
+else()
+    set(CJSON_PC_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@")
+endif()
+
+file(MAKE_DIRECTORY "${_pkgconfig_output_dir}")
+configure_file("@template_path@" "${_pkgconfig_output_dir}/@output_name@" @ONLY)
+]=])
+    string(CONFIGURE "${_install_code_template}" _install_code @ONLY)
+    install(CODE "${_install_code}")
+endfunction()
 
 file(RELATIVE_PATH CJSON_CONFIG_PREFIX_RELATIVE_PATH
     "/${CMAKE_INSTALL_LIBDIR}/cmake/cJSON"
@@ -449,9 +481,9 @@ configure_file(
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/cjson/cJSON.h"
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/cjson")
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/libcjson.pc"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+install_pkgconfig_template(
+    "${CMAKE_CURRENT_SOURCE_DIR}/library_config/libcjson.pc.in"
+    "libcjson.pc")
 
 if(CJSON_INSTALL_SHARED)
     install(FILES
@@ -480,9 +512,9 @@ if(ENABLE_CJSON_UTILS)
     install(FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/include/cjson/cJSON_Utils.h"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/cjson")
-    install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/libcjson_utils.pc"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+    install_pkgconfig_template(
+        "${CMAKE_CURRENT_SOURCE_DIR}/library_config/libcjson_utils.pc.in"
+        "libcjson_utils.pc")
 
     if(CJSON_INSTALL_SHARED)
         install(FILES

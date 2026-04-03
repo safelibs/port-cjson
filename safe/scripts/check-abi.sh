@@ -72,16 +72,15 @@ if [[ -n "$TEMP_BUILD_DIR" ]]; then
         -DENABLE_CJSON_TEST=OFF \
         -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" >/dev/null
     cmake --build "$BUILD_DIR" >/dev/null
-    EXPECTED_INSTALL_PREFIX="$INSTALL_DIR"
 else
     expect_file "$BUILD_DIR/CMakeCache.txt"
     BUILD_SOURCE_DIR=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$BUILD_DIR/CMakeCache.txt" | tail -n1)
     BUILD_SOURCE_DIR=$(cd "$BUILD_SOURCE_DIR" && pwd)
     [[ "$BUILD_SOURCE_DIR" == "$ROOT_DIR" ]] || fail "build dir $BUILD_DIR was configured for $BUILD_SOURCE_DIR, expected $ROOT_DIR"
-    EXPECTED_INSTALL_PREFIX=$(sed -n 's/^CMAKE_INSTALL_PREFIX:PATH=//p' "$BUILD_DIR/CMakeCache.txt" | tail -n1)
 fi
 
 cmake --install "$BUILD_DIR" --prefix "$INSTALL_DIR" >/dev/null
+EXPECTED_INSTALL_PREFIX="$INSTALL_DIR"
 
 CORE_LIB="$INSTALL_DIR/lib/libcjson.so.1.7.17"
 UTILS_LIB="$INSTALL_DIR/lib/libcjson_utils.so.1.7.17"

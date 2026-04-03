@@ -42,6 +42,12 @@ build_source_dir() {
     sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$1/CMakeCache.txt" | tail -n1
 }
 
+cache_value() {
+    local key=$1
+
+    sed -n "s/^${key}:[^=]*=//p" "$2/CMakeCache.txt" | tail -n1
+}
+
 cargo_profile_name() {
     local build_type
 
@@ -56,14 +62,59 @@ cargo_profile_name() {
     esac
 }
 
-build_library_dir() {
-    local profile_dir
+require_build_option() {
+    local option_name=$1
+    local expected_value=$2
+    local actual_value
 
-    profile_dir="$1/cargo-target/$(cargo_profile_name "$1")"
-    expect_dir "$profile_dir"
-    expect_file "$profile_dir/libcjson.so"
-    expect_file "$profile_dir/libcjson_utils.so"
-    printf '%s\n' "$profile_dir"
+    actual_value=$(cache_value "$option_name" "$BUILD_DIR")
+    [[ -n "$actual_value" ]] || fail "missing cache entry: $option_name"
+    [[ "$actual_value" == "$expected_value" ]] || fail "build dir $BUILD_DIR has ${option_name}=${actual_value}, expected ${expected_value}"
+}
+
+has_required_libraries() {
+    local profile_dir=$1
+    local require_utils=$2
+
+    [[ -f "$profile_dir/libcjson.so" ]] || return 1
+    if [[ "$require_utils" -eq 1 ]]; then
+        [[ -f "$profile_dir/libcjson_utils.so" ]] || return 1
+    fi
+
+    return 0
+}
+
+build_library_dir() {
+    local build_dir=$1
+    local require_utils=$2
+    local profile_dir
+    local -a candidates=()
+    local candidate_dir
+
+    profile_dir="$build_dir/cargo-target/$(cargo_profile_name "$build_dir")"
+    if has_required_libraries "$profile_dir" "$require_utils"; then
+        printf '%s\n' "$profile_dir"
+        return
+    fi
+
+    expect_dir "$build_dir/cargo-target"
+    while IFS= read -r -d '' candidate_dir; do
+        if has_required_libraries "$candidate_dir" "$require_utils"; then
+            candidates+=("$candidate_dir")
+        fi
+    done < <(find "$build_dir/cargo-target" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+
+    case "${#candidates[@]}" in
+        1)
+            printf '%s\n' "${candidates[0]}"
+            ;;
+        0)
+            fail "no cargo library directory under $build_dir/cargo-target contains the relink targets"
+            ;;
+        *)
+            fail "multiple cargo library directories under $build_dir/cargo-target contain relink targets: ${candidates[*]}"
+            ;;
+    esac
 }
 
 prepare_include_compat() {
@@ -168,6 +219,8 @@ expect_file "$BUILD_DIR/CMakeCache.txt"
 BUILD_SOURCE_DIR=$(build_source_dir "$BUILD_DIR")
 BUILD_SOURCE_DIR=$(cd "$BUILD_SOURCE_DIR" && pwd)
 [[ "$BUILD_SOURCE_DIR" == "$SAFE_DIR" ]] || fail "build dir $BUILD_DIR was configured for $BUILD_SOURCE_DIR, expected $SAFE_DIR"
+require_build_option ENABLE_CJSON_TEST ON
+require_build_option ENABLE_CJSON_UTILS ON
 
 expect_dir "$ORIGINAL_DIR/tests"
 expect_dir "$SAFE_TESTS_DIR/inputs"
@@ -175,7 +228,7 @@ expect_dir "$SAFE_TESTS_DIR/json-patch-tests"
 mkdir -p "$OBJECT_DIR" "$RUN_TESTS_DIR" "$LOG_DIR"
 prepare_include_compat
 
-LIB_DIR=$(build_library_dir "$BUILD_DIR")
+LIB_DIR=$(build_library_dir "$BUILD_DIR" 1)
 
 compile_object "$ORIGINAL_DIR/test.c" "$OBJECT_DIR/cJSON_test.o"
 compile_unity

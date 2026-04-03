@@ -1,5 +1,5 @@
-libdir=@CMAKE_INSTALL_FULL_LIBDIR@
-includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+libdir=@CJSON_PC_LIBDIR@
+includedir=@CJSON_PC_INCLUDEDIR@
 includedir_cjson=${includedir}/cjson
 
 Name: libcjson

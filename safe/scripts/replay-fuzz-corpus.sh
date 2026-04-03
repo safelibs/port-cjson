@@ -53,13 +53,42 @@ cargo_profile_name() {
     esac
 }
 
-build_library_dir() {
-    local profile_dir
+has_required_libraries() {
+    local profile_dir=$1
 
-    profile_dir="$1/cargo-target/$(cargo_profile_name "$1")"
-    expect_dir "$profile_dir"
-    expect_file "$profile_dir/libcjson.so"
-    printf '%s\n' "$profile_dir"
+    [[ -f "$profile_dir/libcjson.so" ]]
+}
+
+build_library_dir() {
+    local build_dir=$1
+    local profile_dir
+    local -a candidates=()
+    local candidate_dir
+
+    profile_dir="$build_dir/cargo-target/$(cargo_profile_name "$build_dir")"
+    if has_required_libraries "$profile_dir"; then
+        printf '%s\n' "$profile_dir"
+        return
+    fi
+
+    expect_dir "$build_dir/cargo-target"
+    while IFS= read -r -d '' candidate_dir; do
+        if has_required_libraries "$candidate_dir"; then
+            candidates+=("$candidate_dir")
+        fi
+    done < <(find "$build_dir/cargo-target" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+
+    case "${#candidates[@]}" in
+        1)
+            printf '%s\n' "${candidates[0]}"
+            ;;
+        0)
+            fail "no cargo library directory under $build_dir/cargo-target contains the fuzz replay target"
+            ;;
+        *)
+            fail "multiple cargo library directories under $build_dir/cargo-target contain fuzz replay targets: ${candidates[*]}"
+            ;;
+    esac
 }
 
 prepare_include_compat() {
@@ -103,7 +132,7 @@ fi
 printf 'replay-fuzz-corpus: corpus=%s dict=%s\n' "$CORPUS_DIR" "$DICT_FILE"
 
 FOUND_INPUT=0
-while IFS= read -r input_file; do
+while IFS= read -r -d '' input_file; do
     input_name=$(basename "$input_file")
     log_file="$LOG_DIR/${input_name}.log"
     FOUND_INPUT=1
@@ -116,7 +145,7 @@ while IFS= read -r input_file; do
     fi
 
     printf 'replay-fuzz-corpus: ok %s\n' "$input_name"
-done < <(find "$CORPUS_DIR" -maxdepth 1 -type f | sort)
+done < <(find "$CORPUS_DIR" -maxdepth 1 -type f -print0 | sort -z)
 
 [[ "$FOUND_INPUT" -eq 1 ]] || fail "no corpus inputs found in $CORPUS_DIR"
 

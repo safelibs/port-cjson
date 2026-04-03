@@ -3,13 +3,17 @@ if(NOT ENABLE_CJSON_TEST)
 endif()
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/inputs")
-file(GLOB SAFE_INPUT_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/inputs/*")
-file(COPY ${SAFE_INPUT_FIXTURES} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/inputs/")
+file(GLOB SAFE_INPUT_FIXTURES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/inputs/*")
+if(SAFE_INPUT_FIXTURES)
+    file(COPY ${SAFE_INPUT_FIXTURES} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/inputs/")
+endif()
 
 if(ENABLE_CJSON_UTILS)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/json-patch-tests")
-    file(GLOB SAFE_PATCH_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/json-patch-tests/*")
-    file(COPY ${SAFE_PATCH_FIXTURES} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/json-patch-tests/")
+    file(GLOB SAFE_PATCH_FIXTURES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/json-patch-tests/*")
+    if(SAFE_PATCH_FIXTURES)
+        file(COPY ${SAFE_PATCH_FIXTURES} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/json-patch-tests/")
+    endif()
 endif()
 
 add_library(unity STATIC unity/src/unity.c)
@@ -159,3 +163,15 @@ endif()
 add_custom_target(check
     COMMAND "${CMAKE_CTEST_COMMAND}" --output-on-failure)
 add_dependencies(check ${all_safe_tests})
+
+if(UNIX)
+    if(ENABLE_CJSON_UTILS)
+        add_test(NAME link_original_tests
+            COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/link-original-tests.sh" "${CMAKE_BINARY_DIR}")
+        set_tests_properties(link_original_tests PROPERTIES LABELS "compat;relink")
+    endif()
+
+    add_test(NAME replay_fuzz_corpus
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/replay-fuzz-corpus.sh" "${CMAKE_BINARY_DIR}")
+    set_tests_properties(replay_fuzz_corpus PROPERTIES LABELS "compat;fuzz")
+endif()
