@@ -377,14 +377,211 @@ PY
 test_monado() {
   local src=""
   local build_dir="/tmp/build-monado"
-  local test_bin=""
+  local runtime_smoke="$build_dir/tests/monado_json_smoke"
+  local cli_bin="$build_dir/src/xrt/targets/cli/monado-cli"
+  local gui_bin="$build_dir/src/xrt/targets/gui/monado-gui"
+  local service_bin="$build_dir/src/xrt/targets/service/monado-service"
 
   should_run monado || return 0
 
   install_build_deps monado
   src="$(fetch_source monado)"
 
-  log "monado: building and running tests_json with system cJSON"
+  log "monado: building runtime binaries and exercising Vive/config/calibration/GUI JSON handling"
+  cat > "$src/tests/tests_monado_runtime_json.cpp" <<'EOF'
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+#include <iostream>
+#include <string>
+
+#include "tracking/t_tracking.h"
+#include "util/u_config_json.h"
+#include "vive/vive_config.h"
+
+namespace {
+
+void
+check(bool condition, const char *message)
+{
+  if (!condition) {
+    std::cerr << message << std::endl;
+    std::exit(1);
+  }
+}
+
+bool
+approx(double left, double right, double epsilon = 1e-6)
+{
+  return std::fabs(left - right) <= epsilon;
+}
+
+} // namespace
+
+int
+main()
+{
+  namespace fs = std::filesystem;
+
+  const fs::path config_home = "/tmp/monado-config-home";
+  const fs::path calibration_path = "/tmp/monado-calibration.json";
+
+  fs::remove_all(config_home);
+  fs::create_directories(config_home);
+  std::remove(calibration_path.c_str());
+  check(setenv("XDG_CONFIG_HOME", config_home.c_str(), 1) == 0, "failed to set XDG_CONFIG_HOME");
+
+  std::string vive_json = R"json(
+{
+  "model_number": "Vive MV",
+  "acc_bias": [1.0, 2.0, 3.0],
+  "acc_scale": [1.1, 1.2, 1.3],
+  "gyro_bias": [0.1, 0.2, 0.3],
+  "gyro_scale": [0.4, 0.5, 0.6],
+  "mb_serial_number": "MB-123",
+  "device_serial_number": "LHR-123",
+  "lens_separation": 0.063,
+  "device": {
+    "persistence": 0.11,
+    "physical_aspect_x_over_y": 0.91,
+    "eye_target_height_in_pixels": 1201,
+    "eye_target_width_in_pixels": 1099
+  }
+}
+)json";
+  struct vive_config vive = {};
+  check(vive_config_parse(&vive, vive_json.data(), U_LOGGING_INFO), "vive_config_parse failed");
+  check(vive.variant == VIVE_VARIANT_VIVE, "vive variant was not parsed");
+  check(vive.display.eye_target_width_in_pixels == 1099, "vive display width was not parsed");
+  check(vive.display.eye_target_height_in_pixels == 1201, "vive display height was not parsed");
+  check(approx(vive.imu.acc_bias.x, 1.0) && approx(vive.imu.gyro_scale.z, 0.6),
+        "vive IMU vectors were not parsed");
+  vive_config_teardown(&vive);
+
+  struct xrt_settings_tracking settings = {};
+  std::snprintf(settings.camera_name, sizeof(settings.camera_name), "%s", "StereoCam");
+  settings.camera_mode = 7;
+  settings.camera_type = XRT_SETTINGS_CAMERA_TYPE_REGULAR_SBS;
+  std::snprintf(settings.calibration_path, sizeof(settings.calibration_path), "%s", calibration_path.c_str());
+
+  struct u_config_json config_json = {};
+  u_config_json_open_or_create_main_file(&config_json);
+  u_config_json_save_calibration(&config_json, &settings);
+  u_config_json_close(&config_json);
+
+  struct xrt_settings_tracking loaded_settings = {};
+  u_config_json_open_or_create_main_file(&config_json);
+  check(u_config_json_get_tracking_settings(&config_json, &loaded_settings),
+        "u_config_json_get_tracking_settings failed");
+  check(std::strcmp(loaded_settings.camera_name, "StereoCam") == 0,
+        "tracking camera_name was not persisted");
+  check(loaded_settings.camera_mode == 7, "tracking camera_mode was not persisted");
+  check(loaded_settings.camera_type == XRT_SETTINGS_CAMERA_TYPE_REGULAR_SBS,
+        "tracking camera_type was not persisted");
+  check(std::strcmp(loaded_settings.calibration_path, calibration_path.c_str()) == 0,
+        "tracking calibration_path was not persisted");
+  u_config_json_close(&config_json);
+
+  struct t_stereo_camera_calibration *stereo = nullptr;
+  t_stereo_camera_calibration_alloc(&stereo, T_DISTORTION_OPENCV_RADTAN_5);
+  check(stereo != nullptr, "t_stereo_camera_calibration_alloc failed");
+  stereo->view[0].image_size_pixels.w = 640;
+  stereo->view[0].image_size_pixels.h = 480;
+  stereo->view[1].image_size_pixels.w = 640;
+  stereo->view[1].image_size_pixels.h = 480;
+  stereo->view[0].intrinsics[0][0] = 1000.0;
+  stereo->view[0].intrinsics[1][1] = 1001.0;
+  stereo->view[0].intrinsics[0][2] = 320.0;
+  stereo->view[0].intrinsics[1][2] = 240.0;
+  stereo->view[0].intrinsics[2][2] = 1.0;
+  stereo->view[1].intrinsics[0][0] = 1002.0;
+  stereo->view[1].intrinsics[1][1] = 1003.0;
+  stereo->view[1].intrinsics[0][2] = 321.0;
+  stereo->view[1].intrinsics[1][2] = 241.0;
+  stereo->view[1].intrinsics[2][2] = 1.0;
+  stereo->view[0].rt5.k1 = 0.11;
+  stereo->view[0].rt5.k2 = 0.12;
+  stereo->view[0].rt5.p1 = 0.13;
+  stereo->view[0].rt5.p2 = 0.14;
+  stereo->view[0].rt5.k3 = 0.15;
+  stereo->view[1].rt5.k1 = 0.21;
+  stereo->view[1].rt5.k2 = 0.22;
+  stereo->view[1].rt5.p1 = 0.23;
+  stereo->view[1].rt5.p2 = 0.24;
+  stereo->view[1].rt5.k3 = 0.25;
+  stereo->camera_translation[0] = 0.1;
+  stereo->camera_translation[1] = 0.2;
+  stereo->camera_translation[2] = 0.3;
+  stereo->camera_rotation[0][0] = 1.0;
+  stereo->camera_rotation[1][1] = 1.0;
+  stereo->camera_rotation[2][2] = 1.0;
+  stereo->camera_essential[0][0] = 1.0;
+  stereo->camera_essential[1][1] = 1.0;
+  stereo->camera_essential[2][2] = 1.0;
+  stereo->camera_fundamental[0][0] = 1.0;
+  stereo->camera_fundamental[1][1] = 1.0;
+  stereo->camera_fundamental[2][2] = 1.0;
+
+  check(t_stereo_camera_calibration_save(calibration_path.c_str(), stereo),
+        "t_stereo_camera_calibration_save failed");
+  struct t_stereo_camera_calibration *loaded_stereo = nullptr;
+  check(t_stereo_camera_calibration_load(calibration_path.c_str(), &loaded_stereo),
+        "t_stereo_camera_calibration_load failed");
+  check(loaded_stereo != nullptr, "loaded stereo calibration was null");
+  check(loaded_stereo->view[0].image_size_pixels.w == 640,
+        "stereo calibration width was not persisted");
+  check(approx(loaded_stereo->camera_translation[0], 0.1),
+        "stereo calibration translation was not persisted");
+
+  struct t_calibration_params params = {};
+  t_calibration_gui_params_default(&params);
+  params.use_fisheye = true;
+  params.mirror_rgb_image = true;
+  params.pattern = T_BOARD_ASYMMETRIC_CIRCLES;
+  params.load.enabled = true;
+  params.load.num_images = 11;
+  params.asymmetric_circles.cols = 4;
+  params.asymmetric_circles.rows = 11;
+  params.asymmetric_circles.diagonal_distance_meters = 0.031f;
+
+  cJSON *scene = nullptr;
+  t_calibration_gui_params_to_json(&scene, &params);
+  check(scene != nullptr, "t_calibration_gui_params_to_json failed");
+
+  struct u_config_json gui_json = {};
+  u_gui_state_open_file(&gui_json);
+  u_gui_state_save_scene(&gui_json, GUI_STATE_SCENE_CALIBRATE, scene);
+  u_config_json_close(&gui_json);
+
+  struct t_calibration_params loaded_params = {};
+  t_calibration_gui_params_default(&loaded_params);
+  u_gui_state_open_file(&gui_json);
+  cJSON *saved_scene = u_gui_state_get_scene(&gui_json, GUI_STATE_SCENE_CALIBRATE);
+  gui_json.root = nullptr;
+  check(saved_scene != nullptr, "saved GUI calibration scene was missing");
+  t_calibration_gui_params_parse_from_json(saved_scene, &loaded_params);
+  cJSON_Delete(saved_scene);
+  check(loaded_params.use_fisheye, "GUI calibration fisheye flag was not persisted");
+  check(loaded_params.mirror_rgb_image, "GUI calibration mirror flag was not persisted");
+  check(loaded_params.pattern == T_BOARD_ASYMMETRIC_CIRCLES,
+        "GUI calibration pattern was not persisted");
+  check(loaded_params.load.enabled && loaded_params.load.num_images == 11,
+        "GUI calibration load state was not persisted");
+  check(approx(loaded_params.asymmetric_circles.diagonal_distance_meters, 0.031f),
+        "GUI calibration circle spacing was not persisted");
+
+  t_stereo_camera_calibration_reference(&loaded_stereo, nullptr);
+  t_stereo_camera_calibration_reference(&stereo, nullptr);
+  std::cout << "monado-json-ok" << std::endl;
+  return 0;
+}
+EOF
+  cat >> "$src/tests/CMakeLists.txt" <<'EOF'
+
+add_executable(monado_json_smoke tests_monado_runtime_json.cpp)
+target_link_libraries(monado_json_smoke PRIVATE aux_vive aux_tracking aux_util)
+EOF
   rm -rf "$build_dir"
   run_logged /tmp/monado-configure.log \
     cmake -S "$src" -B "$build_dir" -G Ninja \
@@ -406,7 +603,6 @@ test_monado() {
       -DXRT_BUILD_DRIVER_OPENGLOVES=OFF \
       -DXRT_BUILD_DRIVER_PSMV=OFF \
       -DXRT_BUILD_DRIVER_PSVR=OFF \
-      -DXRT_BUILD_DRIVER_QWERTY=OFF \
       -DXRT_BUILD_DRIVER_REALSENSE=OFF \
       -DXRT_BUILD_DRIVER_REMOTE=OFF \
       -DXRT_BUILD_DRIVER_RIFT_S=OFF \
@@ -416,14 +612,20 @@ test_monado() {
       -DXRT_BUILD_DRIVER_TWRAP=OFF \
       -DXRT_BUILD_DRIVER_ULV2=OFF \
       -DXRT_BUILD_DRIVER_VF=OFF \
-      -DXRT_BUILD_DRIVER_VIVE=OFF \
       -DXRT_BUILD_DRIVER_WMR=OFF
-  run_logged /tmp/monado-build.log cmake --build "$build_dir" --target tests_json
+  run_logged /tmp/monado-build.log \
+    cmake --build "$build_dir" --target monado_json_smoke monado-cli monado-gui monado-service
 
-  test_bin="$build_dir/tests/tests_json"
-  test -x "$test_bin" || die "monado tests_json binary was not built"
-  run_logged /tmp/monado-tests.log "$test_bin" --success
-  assert_links_to_original "$test_bin"
+  test -x "$runtime_smoke" || die "monado runtime JSON smoke binary was not built"
+  test -x "$cli_bin" || die "monado-cli was not built"
+  test -x "$gui_bin" || die "monado-gui was not built"
+  test -x "$service_bin" || die "monado-service was not built"
+  assert_links_to_original "$runtime_smoke"
+  assert_links_to_original "$cli_bin"
+  assert_links_to_original "$gui_bin"
+  assert_links_to_original "$service_bin"
+  run_logged /tmp/monado-runtime-smoke.log "$runtime_smoke"
+  grep -Fx 'monado-json-ok' /tmp/monado-runtime-smoke.log >/dev/null
 }
 
 test_mosquitto() {
@@ -663,20 +865,205 @@ EOF
 
 test_oidc_agent() {
   local src=""
-  local test_bin=""
+  local agent_bin=""
+  local runtime_smoke="/tmp/oidc-json-smoke"
 
   should_run oidc-agent || return 0
 
   install_build_deps oidc-agent
   src="$(fetch_source oidc-agent)"
 
-  log "oidc-agent: running upstream unit tests against shared libcjson"
-  run_bash_logged /tmp/oidc-agent-test.log \
-    "cd '$src' && make USE_CJSON_SO=1 create_obj_dir_structure test"
+  log "oidc-agent: building with shared libcjson and exercising device-code/account/config-updater JSON paths"
+  run_bash_logged /tmp/oidc-agent-build.log \
+    "cd '$src' && make USE_CJSON_SO=1 create_obj_dir_structure build"
 
-  test_bin="$(find "$src" -path '*/test/bin/test' -type f | head -n1)"
-  [[ -n "$test_bin" ]] || die "oidc-agent test binary was not produced"
-  assert_links_to_original "$test_bin"
+  agent_bin="$src/bin/oidc-agent"
+  test -x "$agent_bin" || die "oidc-agent binary was not built"
+  assert_links_to_original "$agent_bin"
+
+  cat > /tmp/oidc-json-smoke.c <<'EOF'
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "account/account.h"
+#include "oidc-agent/oidc/device_code.h"
+#include "utils/memory.h"
+#include "utils/oidc_error.h"
+#include "wrapper/list.h"
+
+static void stub_log(int level, const char *fmt, ...) {
+  (void)level;
+  (void)fmt;
+}
+
+void logger(int level, const char *fmt, ...) {
+  (void)level;
+  (void)fmt;
+}
+
+void loggerTerminal(int level, const char *fmt, ...) {
+  (void)level;
+  (void)fmt;
+}
+
+void logger_open(const char *name) {
+  (void)name;
+}
+
+int logger_setlogmask(int mask) {
+  return mask;
+}
+
+int logger_setloglevel(int level) {
+  return level;
+}
+
+void (*agent_log)(int, const char *, ...) = stub_log;
+
+int printError(char *fmt, ...) {
+  (void)fmt;
+  return 0;
+}
+
+char *getHostName(void) {
+  char *hostname = secAlloc(5);
+  memcpy(hostname, "host", 5);
+  return hostname;
+}
+
+oidc_error_t checkRedirectUrisForErrors(list_t *redirect_uris) {
+  return (redirect_uris != NULL && redirect_uris->len > 0) ? OIDC_SUCCESS : OIDC_EERROR;
+}
+
+static char *captured = NULL;
+
+oidc_error_t encryptAndWriteToOidcFile(const char *content, const char *shortname,
+                                       const char *password, const char *gpg_key) {
+  size_t len = strlen(content);
+  (void)shortname;
+  (void)password;
+  (void)gpg_key;
+  free(captured);
+  captured = malloc(len + 1);
+  memcpy(captured, content, len + 1);
+  return OIDC_SUCCESS;
+}
+
+oidc_error_t _updateRT(char *file_content, const char *shortname,
+                       const char *refresh_token, const char *password,
+                       const char *gpg_key);
+
+int main(void) {
+  const char *device_json =
+      "{\"device_code\":\"dev-123\",\"user_code\":\"ABCD-EFGH\",\"verification_url\":\"https://verify.example/device\",\"verification_url_complete\":\"https://verify.example/device?user_code=ABCD-EFGH\",\"expires_in\":600}";
+  const char *account_json =
+      "{\"name\":\"demo\",\"issuer_url\":\"https://issuer.example\",\"client_id\":\"cid\",\"client_secret\":\"secret\",\"username\":\"user\",\"password\":\"pw\",\"refresh_token\":\"old-refresh\",\"scope\":\"openid profile\",\"redirect_uris\":[\"http://localhost:4242/callback\"],\"device_authorization_endpoint\":\"https://issuer.example/device\",\"client_name\":\"Demo Client\",\"daeSetByUser\":1,\"audience\":\"api://default\"}";
+  struct oidc_device_code *dc = getDeviceCodeFromJSON(device_json);
+  struct oidc_device_code *roundtrip_dc = NULL;
+  struct oidc_account *account = NULL;
+  struct oidc_account *rendered_account = NULL;
+  struct oidc_account *updated_account = NULL;
+  list_t *accounts = NULL;
+  char *loaded_accounts = NULL;
+  char *rendered = NULL;
+  char *dc_json = NULL;
+  char *mutable_json = NULL;
+
+  if (dc == NULL) {
+    fprintf(stderr, "device code JSON did not parse\n");
+    return 1;
+  }
+  if (strcmp(oidc_device_getVerificationUri(*dc), "https://verify.example/device") != 0 ||
+      oidc_device_getInterval(*dc) != 5) {
+    fprintf(stderr, "device code JSON fields were parsed incorrectly\n");
+    return 2;
+  }
+  dc_json = deviceCodeToJSON(*dc);
+  roundtrip_dc = getDeviceCodeFromJSON(dc_json);
+  if (roundtrip_dc == NULL ||
+      strcmp(oidc_device_getVerificationUri(*roundtrip_dc), "https://verify.example/device") != 0 ||
+      oidc_device_getInterval(*roundtrip_dc) != 5) {
+    fprintf(stderr, "device code JSON was not serialized correctly\n");
+    return 3;
+  }
+
+  account = getAccountFromJSON(account_json);
+  if (account == NULL) {
+    fprintf(stderr, "account JSON did not parse\n");
+    return 4;
+  }
+
+  accounts = list_new();
+  list_rpush(accounts, list_node_new(account));
+  loaded_accounts = getAccountNameList(accounts);
+  list_destroy(accounts);
+  accounts = NULL;
+  if (loaded_accounts == NULL || strstr(loaded_accounts, "\"demo\"") == NULL) {
+    fprintf(stderr, "loaded-account JSON was not serialized correctly\n");
+    return 5;
+  }
+
+  rendered = accountToJSONString(account);
+  rendered_account = getAccountFromJSON(rendered);
+  if (rendered_account == NULL ||
+      strcmp(account_getRefreshToken(rendered_account), "old-refresh") != 0 ||
+      strcmp(account_getIssuerUrl(rendered_account), "https://issuer.example") != 0) {
+    fprintf(stderr, "account JSON was not serialized correctly\n");
+    return 6;
+  }
+
+  mutable_json = secAlloc(strlen(rendered) + 1);
+  memcpy(mutable_json, rendered, strlen(rendered) + 1);
+  if (_updateRT(mutable_json, "demo", "new-refresh", "pw", NULL) != OIDC_SUCCESS) {
+    fprintf(stderr, "refresh-token updater failed\n");
+    return 7;
+  }
+  updated_account = getAccountFromJSON(captured);
+  if (updated_account == NULL ||
+      strcmp(account_getRefreshToken(updated_account), "new-refresh") != 0) {
+    fprintf(stderr, "refresh-token updater did not rewrite JSON correctly\n");
+    return 8;
+  }
+
+  puts("oidc-json-ok");
+  free(captured);
+  secFree(loaded_accounts);
+  secFree(rendered);
+  secFree(dc_json);
+  secFreeDeviceCode(roundtrip_dc);
+  secFreeDeviceCode(dc);
+  secFreeAccount(updated_account);
+  secFreeAccount(rendered_account);
+  secFreeAccount(account);
+  return 0;
+}
+EOF
+  run_bash_logged /tmp/oidc-agent-runtime-smoke-build.log "
+    cc -std=c99 -ffunction-sections -fdata-sections -DUSE_CJSON_SO \
+      -I'$src/src' -I'$src/lib' \$(pkg-config --cflags libcjson) \
+      /tmp/oidc-json-smoke.c \
+      '$src/src/utils/memory.c' \
+      '$src/src/utils/oidc_error.c' \
+      '$src/src/utils/string/stringUtils.c' \
+      '$src/src/utils/json.c' \
+      '$src/src/utils/listUtils.c' \
+      '$src/src/account/issuer.c' \
+      '$src/src/account/issuer_helper.c' \
+      '$src/src/account/setandget.c' \
+      '$src/src/account/account.c' \
+      '$src/src/oidc-agent/oidc/device_code.c' \
+      '$src/src/oidc-agent/oidcp/config_updater.c' \
+      '$src/lib/list/list.c' \
+      '$src/lib/list/list_iterator.c' \
+      '$src/lib/list/list_node.c' \
+      \$(pkg-config --libs libcjson) -Wl,--gc-sections -o '$runtime_smoke'
+  "
+
+  assert_links_to_original "$runtime_smoke"
+  run_logged /tmp/oidc-agent-runtime-smoke.log "$runtime_smoke"
+  grep -Fx 'oidc-json-ok' /tmp/oidc-agent-runtime-smoke.log >/dev/null
 }
 
 test_pgagroal() {
