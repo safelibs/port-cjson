@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_iperf3=/usr/bin/iperf3
+logfile=
+previous=
+
+for argument in "$@"; do
+    if [[ "$previous" == "--logfile" ]]; then
+        logfile=$argument
+        break
+    fi
+
+    case "$argument" in
+        --logfile=*)
+            logfile=${argument#--logfile=}
+            break
+            ;;
+        --logfile)
+            previous=--logfile
+            ;;
+        *)
+            previous=
+            ;;
+    esac
+done
+
+if [[ -n "$logfile" ]]; then
+    : >"$logfile"
+fi
+
+exec "$real_iperf3" "$@"

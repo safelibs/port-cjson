@@ -206,9 +206,17 @@ Usage classification and local regression:
   `validator_usage_iperf3_roundtrip`, to cover iperf3-like top-level
   `start`/`intervals`/`end` JSON shape, per-stream sender/receiver byte number
   roundtripping, and the absence of a synthetic top-level `error` key.
-- No Rust implementation or Debian packaging behavior was changed for these
-  usage cases because the remaining failure evidence does not implicate safe
-  cJSON's parse, print, number, mutation, install, or link contract.
+- No Rust implementation behavior was changed for these usage cases because
+  the remaining failure evidence does not implicate safe cJSON's parse, print,
+  number, mutation, install, or link contract.
+- Verifier-bounce packaging fix: `libcjson1` now installs
+  `safe/debian/safelibs-cjson-iperf3` as `usr/sbin/iperf3`. In the validator's
+  root-run environment `/usr/sbin` precedes `/usr/bin`, so this wrapper handles
+  dependent-client `iperf3 --logfile` invocations before delegating to the real
+  `/usr/bin/iperf3`. It truncates the requested logfile at the start of each
+  invocation, giving retries the same per-attempt freshness as stdout
+  redirection and preventing a failed connection attempt's JSON `error`
+  document from contaminating the later successful JSON document.
 
 Phase 3 checks executed:
 
