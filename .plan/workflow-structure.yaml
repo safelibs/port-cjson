@@ -1,0 +1,268 @@
+linear: true
+yaml_source_mode: inline-only
+verifier_encoding: explicit-phases
+phases:
+  - order: 1
+    id: impl_01_validator_baseline
+    type: implement
+    bounce_target: null
+    required_preexisting_inputs:
+      - original/
+      - safe/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - safe/crates/libcjson/src/
+      - safe/crates/libcjson_utils/src/
+      - safe/tests/CMakeLists.txt
+      - safe/tests/regressions/
+      - safe/debian/
+      - safe/debian/control
+      - safe/debian/rules
+      - safe/abi/libcjson.map
+      - safe/abi/libcjson_utils.map
+      - safe/library_config/
+      - packaging/package.env
+      - scripts/install-build-deps.sh
+      - scripts/check-layout.sh
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - scripts/run-validation-tests.sh
+      - scripts/lib/build_port_lock.py
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - tests/test_build_port_lock.py
+      - dependents.json
+      - relevant_cves.json
+      - all_cves.json
+  - order: 2
+    id: check_01_baseline_software_tester
+    type: check
+    bounce_target: impl_01_validator_baseline
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - safe/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - safe/debian/control
+      - packaging/package.env
+      - scripts/check-layout.sh
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - scripts/run-validation-tests.sh
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - tests/test_build_port_lock.py
+  - order: 3
+    id: check_01_baseline_senior_tester
+    type: check
+    bounce_target: impl_01_validator_baseline
+    required_preexisting_inputs:
+      - validator-report.md
+      - .gitignore
+      - validator/.git/
+  - order: 4
+    id: impl_02_source_regression_fixes
+    type: implement
+    bounce_target: null
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - original/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - safe/tests/CMakeLists.txt
+      - safe/tests/regressions/number_cve_2023_26819.c
+      - safe/tests/regressions/json_pointer_cve_2025_57052.c
+      - safe/tests/regressions/core_hooks_smoke.c
+      - safe/debian/control
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - safe/crates/libcjson/src/
+      - safe/crates/libcjson_utils/src/
+      - safe/abi/libcjson.map
+      - safe/abi/libcjson_utils.map
+  - order: 5
+    id: check_02_source_regression_software_tester
+    type: check
+    bounce_target: impl_02_source_regression_fixes
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - safe/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - safe/tests/CMakeLists.txt
+      - safe/tests/regressions/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/crates/libcjson/src/
+      - safe/crates/libcjson_utils/src/
+      - safe/scripts/check-abi.sh
+      - packaging/package.env
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - scripts/run-validation-tests.sh
+  - order: 6
+    id: check_02_source_regression_senior_tester
+    type: check
+    bounce_target: impl_02_source_regression_fixes
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - safe/tests/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/crates/
+      - safe/CMakeLists.txt
+  - order: 7
+    id: impl_03_usage_dependent_fixes
+    type: implement
+    bounce_target: null
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - original/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - validator/tests/cjson/tests/fixtures/dependents.json
+      - safe/tests/regressions/dependents_parse_payloads_smoke.c
+      - safe/tests/regressions/dependents_roundtrip_shapes_smoke.c
+      - safe/tests/regressions/dependents_config_roundtrip_smoke.c
+      - packaging/package.env
+      - safe/debian/control
+      - safe/debian/rules
+      - safe/debian/libcjson-dev.install
+      - safe/debian/libcjson1.install
+      - safe/debian/libcjson1.symbols
+      - safe/library_config/
+      - safe/CMakeLists.txt
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - safe/abi/libcjson.map
+      - safe/abi/libcjson_utils.map
+      - safe/crates/libcjson/src/
+      - safe/crates/libcjson_utils/src/
+  - order: 8
+    id: check_03_usage_software_tester
+    type: check
+    bounce_target: impl_03_usage_dependent_fixes
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - safe/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - safe/tests/CMakeLists.txt
+      - safe/tests/regressions/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/crates/libcjson/src/
+      - safe/crates/libcjson_utils/src/
+      - safe/scripts/check-build-contract.sh
+      - safe/scripts/check-abi.sh
+      - packaging/package.env
+      - safe/debian/
+      - safe/library_config/
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - scripts/run-validation-tests.sh
+  - order: 9
+    id: check_03_usage_senior_tester
+    type: check
+    bounce_target: impl_03_usage_dependent_fixes
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - safe/tests/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/crates/
+      - safe/debian/
+      - safe/library_config/
+      - packaging/
+      - scripts/
+  - order: 10
+    id: impl_04_catch_all_final_validation
+    type: implement
+    bounce_target: null
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - original/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - safe/tests/
+      - safe/crates/
+      - safe/abi/
+      - safe/debian/
+      - safe/library_config/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - packaging/package.env
+      - scripts/check-layout.sh
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - scripts/run-validation-tests.sh
+      - scripts/lib/build_port_lock.py
+      - tests/test_build_port_lock.py
+  - order: 11
+    id: check_04_final_validator_software_tester
+    type: check
+    bounce_target: impl_04_catch_all_final_validation
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - safe/
+      - safe/Cargo.toml
+      - safe/crates/libcjson/Cargo.toml
+      - safe/crates/libcjson_utils/Cargo.toml
+      - safe/CMakeLists.txt
+      - safe/tests/CMakeLists.txt
+      - safe/tests/regressions/
+      - tests/
+      - tests/upstream/
+      - tests/port/
+      - packaging/package.env
+      - scripts/check-layout.sh
+      - scripts/build-debs.sh
+      - scripts/lib/build-deb-common.sh
+      - scripts/run-validation-tests.sh
+      - scripts/lib/build_port_lock.py
+      - tests/test_build_port_lock.py
+  - order: 12
+    id: check_04_final_senior_tester
+    type: check
+    bounce_target: impl_04_catch_all_final_validation
+    required_preexisting_inputs:
+      - validator-report.md
+      - validator/.git/
+      - .work/validation/port-deb-lock.json
+      - .work/validation/artifacts/port/results/cjson/summary.json
+      - .work/validation/artifacts/proof/cjson-port-validation-proof.json
