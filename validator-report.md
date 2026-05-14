@@ -115,6 +115,11 @@ failed `source` or `regression` validator cases. No source/API or CVE
 regression implementation fixes are required for this phase, and no new local
 regression tests are needed before the required validation rerun.
 
+Validated port commit: `898fa6092cb8b7e57fce26343d4f69c365666359`
+(`SAFELIBS_COMMIT_SHA=898fa6092cb8b7e57fce26343d4f69c365666359`).
+The final report commit differs from the validated port commit only because this
+post-validation report update was committed after the worktree validator run.
+
 Preexisting source/API cases:
 
 - `allocator-hooks-edge`: passed
@@ -127,6 +132,56 @@ Preexisting CVE regression cases:
 
 - `cve-2023-26819`: passed
 - `cve-2025-57052`: passed
+
+Local source/API and CVE regression changes:
+
+- No Rust implementation files changed.
+- No new `safe/tests/regressions/` files were needed.
+- Existing checked-in regressions remain registered:
+  `number_cve_2023_26819`, `json_pointer_cve_2025_57052`, and
+  `core_hooks_smoke`.
+
+Phase 2 checks executed:
+
+- `python3` classification of
+  `.work/validation/artifacts/port/results/cjson/*.json` by `kind`.
+- `cd safe && cargo test --workspace`
+- `cmake -S safe -B "$tmp_build" -G Ninja -DENABLE_CJSON_UTILS=ON -DENABLE_CJSON_TEST=ON`
+- `cmake --build "$tmp_build"`
+- `ctest --test-dir "$tmp_build" --output-on-failure`
+- `safe/scripts/check-abi.sh "$tmp_build"`
+- Detached worktree package and validator protocol with
+  `SAFELIBS_COMMIT_SHA=898fa6092cb8b7e57fce26343d4f69c365666359`,
+  `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
+  `SAFELIBS_RECORD_CASTS=1`.
+
+Fresh Phase 2 validator result summary:
+
+- Cases: `273`
+- Source cases: `5`
+- Usage cases: `266`
+- Regression cases: `2`
+- Passed: `271`
+- Failed: `2`
+- Casts: `273`
+- Source/API failures: none
+- CVE regression failures: none
+
+Remaining non-source/non-regression failures for the next phase:
+
+- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
+- `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
+
+Fresh Phase 2 copied package metadata:
+
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778798309_amd64.deb`,
+  sha256 `8a241d7863a76ded722753b75c73dd1c9fc2766d1719505d424dd78593f58af4`,
+  size `557246`
+- `libcjson-dev`:
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778798309_amd64.deb`,
+  sha256 `ae4862f5e6236e42058d960bce770ce0f99fd7e0eb47f5b9ac9a67e13b9812b7`,
+  size `9876`
+- Unported original packages: none
 
 ## Artifact paths
 
