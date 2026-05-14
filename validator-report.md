@@ -187,7 +187,13 @@ Fresh Phase 2 copied package metadata:
 
 Phase: `impl_03_usage_dependent_fixes`
 
-Pre-validation candidate status:
+Validated port commit: `8fe5692eef50cbf166280a7f9944a6069f2fc1e0`
+(`SAFELIBS_COMMIT_SHA=8fe5692eef50cbf166280a7f9944a6069f2fc1e0`).
+The final report commit differs from the validated port commit only because
+this post-validation report update was committed after the worktree validator
+run.
+
+Usage classification and local regression:
 
 - Remaining Phase 2 failures classified from
   `.work/validation/artifacts/port/results/cjson/*.json` are both `usage`:
@@ -200,8 +206,61 @@ Pre-validation candidate status:
   `validator_usage_iperf3_roundtrip`, to cover iperf3-like top-level
   `start`/`intervals`/`end` JSON shape, per-stream sender/receiver byte number
   roundtripping, and the absence of a synthetic top-level `error` key.
+- No Rust implementation or Debian packaging behavior was changed for these
+  usage cases because the remaining failure evidence does not implicate safe
+  cJSON's parse, print, number, mutation, install, or link contract.
 
-Current blocker classification:
+Phase 3 checks executed:
+
+- `python3` classification of
+  `.work/validation/artifacts/port/results/cjson/*.json` by `kind`.
+- Read
+  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes.sh`
+  and
+  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh`.
+- `cargo test --workspace` from `safe/`.
+- `cmake -S safe -B .work/local-check-build -G Ninja -DENABLE_CJSON_UTILS=ON -DENABLE_CJSON_TEST=ON`
+- `cmake --build .work/local-check-build`
+- `ctest --test-dir .work/local-check-build --output-on-failure`
+- `safe/scripts/check-build-contract.sh`
+- `safe/scripts/check-abi.sh .work/local-check-build`
+- `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0`
+- `nm -D /lib/x86_64-linux-gnu/libiperf.so.0`
+- `python3 validator/tools/run_matrix.py --help`
+- Detached worktree package and validator protocol with
+  `SAFELIBS_COMMIT_SHA=8fe5692eef50cbf166280a7f9944a6069f2fc1e0`,
+  `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
+  `SAFELIBS_RECORD_CASTS=1`.
+
+Fresh Phase 3 validator result summary:
+
+- Cases: `273`
+- Source cases: `5`
+- Usage cases: `266`
+- Regression cases: `2`
+- Passed: `272`
+- Failed: `1`
+- Casts: `273`
+- Source/API failures: none
+- CVE regression failures: none
+- Non-usage failures for Phase 4: none
+- Usage failures fixed in this run:
+  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
+- Remaining usage validator blocker:
+  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
+
+Fresh Phase 3 copied package metadata:
+
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778800296_amd64.deb`,
+  sha256 `332d401aaafd6724e9fbd8029ad86aa429f07cceb4be36dbaa03e242cfbef260`,
+  size `557238`
+- `libcjson-dev`:
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778800296_amd64.deb`,
+  sha256 `ed26bea4ffca11011ea09503ced8f9c4ef6e55142fc46c32cd95e69b96830934`,
+  size `9876`
+- Unported original packages: none
+
+Validator bug/blocker classification:
 
 - `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` appears
   to be a validator testcase/runtime assumption rather than a safe cJSON
@@ -224,6 +283,19 @@ Current blocker classification:
   `libcjson1` packages cannot change those iperf3 JSON paths without modifying
   validator source or using an invasive process-wide preload outside the cJSON
   Debian package contract.
+- Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
+- Final port-mode evidence:
+  `.work/validation/artifacts/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json`
+  failed with log
+  `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`.
+  The log shows stdout keys `["end","intervals","start"]` while the logfile
+  stream yields one `["end","error","intervals","start"]` document followed by
+  one `["end","intervals","start"]` document.
+- Original-mode/source-preserving skip evidence: the same r16 command shape
+  reproduces with stock Ubuntu `iperf3`/`libiperf0` and no port override
+  packages, and `run_matrix.py --help` exposes no per-testcase skip or select
+  option. Skipping only this testcase would require modifying validator source
+  or testcase files, which this phase is not permitted to do.
 
 ## Artifact paths
 
