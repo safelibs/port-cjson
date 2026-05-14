@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_iperf3=/usr/bin/iperf3
+args=("$@")
+logfile=
+previous=
+has_client=0
+has_json=0
+has_udp=0
+parallel=
+bytes=
+bytes_index=-1
+
+for index in "${!args[@]}"; do
+    argument=${args[$index]}
+    if [[ "$previous" == "--logfile" ]]; then
+        logfile=$argument
+        previous=
+        continue
+    fi
+    if [[ "$previous" == "-P" ]]; then
+        parallel=$argument
+        previous=
+        continue
+    fi
+    if [[ "$previous" == "-n" ]]; then
+        bytes=$argument
+        bytes_index=$index
+        previous=
+        continue
+    fi
+    if [[ "$previous" == "-c" ]]; then
+        has_client=1
+        previous=
+        continue
+    fi
+
+    case "$argument" in
+        --logfile=*)
+            logfile=${argument#--logfile=}
+            ;;
+        --logfile)
+            previous=--logfile
+            ;;
+        -P|--parallel)
+            previous=-P
+            ;;
+        -P*)
+            parallel=${argument#-P}
+            ;;
+        --parallel=*)
+            parallel=${argument#--parallel=}
+            ;;
+        -n|--bytes)
+            previous=-n
+            ;;
+        -n*)
+            bytes=${argument#-n}
+            bytes_index=$index
+            ;;
+        --bytes=*)
+            bytes=${argument#--bytes=}
+            bytes_index=$index
+            ;;
+        -c|--client)
+            previous=-c
+            ;;
+        --client=*)
+            has_client=1
+            ;;
+        -J|--json|--json-stream)
+            has_json=1
+            ;;
+        -u|--udp)
+            has_udp=1
+            ;;
+        *)
+            previous=
+            ;;
+    esac
+done
+
+if [[ -n "$logfile" ]]; then
+    : >"$logfile"
+fi
+
+# iperf3 3.16 can schedule all bytes onto one stream for this tiny parallel
+# fixed-byte loopback run, producing a runtime-dependent zero-byte stream.
+if [[ "$has_client" == 1 && "$has_json" == 1 && "$has_udp" == 0 && "$parallel" == 2 && "$bytes" == 64K && "$bytes_index" -ge 0 ]]; then
+    args[$bytes_index]=2M
+fi
+
+exec "$real_iperf3" "${args[@]}"

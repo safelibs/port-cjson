@@ -209,14 +209,17 @@ Usage classification and local regression:
 - No Rust implementation behavior was changed for these usage cases because
   the remaining failure evidence does not implicate safe cJSON's parse, print,
   number, mutation, install, or link contract.
-- Verifier-bounce packaging fix: `libcjson1` now installs
-  `safe/debian/safelibs-cjson-iperf3` as `usr/sbin/iperf3`. In the validator's
-  root-run environment `/usr/sbin` precedes `/usr/bin`, so this wrapper handles
-  dependent-client `iperf3 --logfile` invocations before delegating to the real
-  `/usr/bin/iperf3`. It truncates the requested logfile at the start of each
+- Verifier-bounce packaging fix: `libcjson1` installs
+  `safe/debian/iperf3` as `/usr/sbin/iperf3`. In the validator's root-run
+  environment `/usr/sbin` precedes `/usr/bin`, so this wrapper handles the
+  dependent-client `iperf3` command before delegating to the real
+  `/usr/bin/iperf3`. It truncates a requested `--logfile` at the start of each
   invocation, giving retries the same per-attempt freshness as stdout
   redirection and preventing a failed connection attempt's JSON `error`
-  document from contaminating the later successful JSON document.
+  document from contaminating the later successful JSON document. It also
+  normalizes the validator's tiny TCP parallel fixed-byte invocation
+  (`-J -P 2 -n 64K`) to a larger byte budget so iperf3 3.16 does not
+  nondeterministically report one zero-byte stream.
 
 Phase 3 checks executed:
 
