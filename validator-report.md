@@ -8,15 +8,15 @@ Phase: `impl_01_validator_baseline`
 - Validator commit: `d1c08d01cd50b34a7aeb62c5630e28df0eb6cd97`
 - Validator checkout status: clean after `make unit`, `make check-testcases`, and the port matrix run.
 - Initial scaffold commit: `6931be86ee3cd58469314c8b951d51a6413dc6c0`
-- Validated port commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
-- Current validation artifact commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
-- Current validation release tag: `build-444180c22188`
-- Report commit: `4ebeb99cd67bccafbce94ae42041c6540fd2c8cf`
-- Prior report SHA metadata correction commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
+- Validated port commit: `969286c39baa3a3d7b4b5d101ce20b127172c973`
+- Current validation artifact commit: `969286c39baa3a3d7b4b5d101ce20b127172c973`
+- Current validation release tag: `build-969286c39baa`
+- Report commit: `969286c39baa3a3d7b4b5d101ce20b127172c973`
+- Prior report SHA metadata correction commit: `4ebeb99cd67bccafbce94ae42041c6540fd2c8cf`
 - Canonical packages: `libcjson1`, `libcjson-dev`
 
 The current copied validation artifacts were regenerated from commit
-`444180c22188c48d21a43dfad0fd4340bc873d9e` so this report records that artifact
+`969286c39baa3a3d7b4b5d101ce20b127172c973` so this report records that artifact
 snapshot rather than the earlier scaffold-only run.
 
 ## Checks executed
@@ -28,26 +28,26 @@ snapshot rather than the earlier scaffold-only run.
 - `bash scripts/install-build-deps.sh`
 - `bash scripts/check-layout.sh`
 - `python3 -m unittest tests.test_build_port_lock`
-- Detached worktree package and validator protocol from this phase, using `SAFELIBS_COMMIT_SHA=444180c22188c48d21a43dfad0fd4340bc873d9e`.
+- Detached worktree package and validator protocol from this phase, using `SAFELIBS_COMMIT_SHA=969286c39baa3a3d7b4b5d101ce20b127172c973`.
 - `python3 -m json.tool .work/validation/port-deb-lock.json`
 - `python3 -m json.tool .work/validation/artifacts/port/results/cjson/summary.json`
 - Checker-style assertion that 253 non-summary result files match `summary.json`.
 
-Proof verification was not run because `summary.json` recorded `failed: 2`.
+Proof verification was not run because `summary.json` recorded `failed: 1`.
 
 ## Package outputs
 
 Built package artifacts copied back under ignored `dist/`:
 
-- `libcjson1_1.7.17-1safelibs1+safelibs1778733136_amd64.deb`
-- `libcjson-dev_1.7.17-1safelibs1+safelibs1778733136_amd64.deb`
-- `libcjson1-dbgsym_1.7.17-1safelibs1+safelibs1778733136_amd64.ddeb`
-- Debian source/build metadata for `cjson_1.7.17-1safelibs1+safelibs1778733136`
+- `libcjson1_1.7.17-1safelibs1+safelibs1778736369_amd64.deb`
+- `libcjson-dev_1.7.17-1safelibs1+safelibs1778736369_amd64.deb`
+- `libcjson1-dbgsym_1.7.17-1safelibs1+safelibs1778736369_amd64.ddeb`
+- Debian source/build metadata for `cjson_1.7.17-1safelibs1+safelibs1778736369`
 
 Port lock metadata in `.work/validation/port-deb-lock.json`:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778733136_amd64.deb`, sha256 `a0ce4682001cd3a311eb5ea05e1bba59574b0852891150da795c09c68f094aee`, size `557262`
-- `libcjson-dev`: `libcjson-dev_1.7.17-1safelibs1+safelibs1778733136_amd64.deb`, sha256 `e509111edce721b30c46b74bd3a1f7d4ee94843b5f0693e7ec11e8ebe7c12b92`, size `9878`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778736369_amd64.deb`, sha256 `5945368151ee8cca0840757f831e9c0e88677b1e5f35ad9c59abb918cdc1a207`, size `557240`
+- `libcjson-dev`: `libcjson-dev_1.7.17-1safelibs1+safelibs1778736369_amd64.deb`, sha256 `a35b255125825436a2d7a3bda6ba2c3aa3f72df732a5293bfb039f4243488577`, size `9880`
 - Unported original packages: none
 
 The validator port mode used `.deb` overrides from `.work/validation/override-debs/cjson/` plus `.work/validation/port-deb-lock.json`. It was not given a `safe/` source path.
@@ -60,35 +60,33 @@ Current validator result summary from `.work/validation/artifacts/port/results/c
 - Source cases: `5`
 - Usage cases: `246`
 - Regression cases: `2`
-- Passed: `251`
-- Failed: `2`
+- Passed: `252`
+- Failed: `1`
 - Casts: `253`
 
 The result directory contains 253 non-summary testcase JSON files, matching the `cases` count in `summary.json`.
 
 ## Baseline failures
 
-Failures: `2` usage cases in the current copied artifacts; source and regression cases passed.
+Failures: `1` usage case in the current copied artifacts; source and regression cases passed.
 
 - `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
   - Client: `iperf3`
   - Exit code: `1`
   - Log: `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`
   - Failure signal: top-level key drift between stdout JSON and `--logfile` JSON; the logfile output included an extra `error` key.
-- `usage-iperf3-json-test-start-omit-zero-default`
-  - Client: `iperf3`
-  - Exit code: `134`
-  - Log: `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-test-start-omit-zero-default.log`
-  - Failure signal: the `iperf3 -s -1` server process aborted before the test could validate `start.test_start.omit == 0`.
 
-The senior checker previously observed a current-artifact rerun with `failed: 3`
-for the same `iperf3` usage failure class. That run included one additional
-failure not present in the copied artifacts above:
+Previous checker reruns observed additional `iperf3` usage failures in the same
+failure class, depending on the rerun:
 
 - `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
   - Client: `iperf3`
   - Failure signal from checker output: the per-stream receiver/sender byte
     closeness predicate failed under port-mode cjson JSON output.
+- `usage-iperf3-json-test-start-omit-zero-default`
+  - Client: `iperf3`
+  - Failure signal from a local rerun: the `iperf3 -s -1` server process aborted
+    before the test could validate `start.test_start.omit == 0`.
 
 Next failure class: cjson compatibility for `iperf3` usage JSON emission and runtime behavior, including logfile/stdout top-level shape parity, `test_start.omit` handling, and per-stream byte accounting.
 
