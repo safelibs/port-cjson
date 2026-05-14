@@ -183,6 +183,48 @@ Fresh Phase 2 copied package metadata:
   size `9876`
 - Unported original packages: none
 
+## Phase 3 usage and dependent-client findings
+
+Phase: `impl_03_usage_dependent_fixes`
+
+Pre-validation candidate status:
+
+- Remaining Phase 2 failures classified from
+  `.work/validation/artifacts/port/results/cjson/*.json` are both `usage`:
+  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` and
+  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`.
+- The validator scripts were reviewed under
+  `validator/tests/cjson/tests/cases/usage/`.
+- Added local deterministic cJSON public-API regression
+  `safe/tests/regressions/validator_usage_iperf3_roundtrip.c`, registered as
+  `validator_usage_iperf3_roundtrip`, to cover iperf3-like top-level
+  `start`/`intervals`/`end` JSON shape, per-stream sender/receiver byte number
+  roundtripping, and the absence of a synthetic top-level `error` key.
+
+Current blocker classification:
+
+- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` appears
+  to be a validator testcase/runtime assumption rather than a safe cJSON
+  behavior failure. On stock Ubuntu packages outside the port override path,
+  30 local repetitions of the testcase's iperf3 command shape produced 11
+  assertion failures where one parallel stream carried all bytes
+  (`sender.bytes = receiver.bytes = 131072`) and the other stream reported
+  zero sender/receiver bytes. That is iperf3 transfer scheduling behavior, not
+  JSON parse/print drift.
+- `usage-iperf3-json-r16-logfile-json-equals-stdout-shape` appears to be a
+  validator testcase retry/logfile bug. On stock Ubuntu packages outside the
+  port override path, 30 local repetitions produced 30 key-drift failures. The
+  logfile path retained an initial failed-connection JSON object with top-level
+  `error`, then appended the successful result; `jq -S 'keys'` therefore saw
+  two JSON documents while stdout redirection was overwritten on each retry.
+- The dependent binary used by these cases is not linked to the port package:
+  `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0` has no `NEEDED` entry for
+  `libcjson.so`, and `nm -D /lib/x86_64-linux-gnu/libiperf.so.0` shows
+  exported `cJSON_*` symbols inside `libiperf` itself. Installing override
+  `libcjson1` packages cannot change those iperf3 JSON paths without modifying
+  validator source or using an invasive process-wide preload outside the cJSON
+  Debian package contract.
+
 ## Artifact paths
 
 - Port lock: `.work/validation/port-deb-lock.json`

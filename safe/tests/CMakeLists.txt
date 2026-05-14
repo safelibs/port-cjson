@@ -114,6 +114,7 @@ set(regression_tests
     dependents_parse_payloads_smoke
     dependents_roundtrip_shapes_smoke
     dependents_config_roundtrip_smoke
+    validator_usage_iperf3_roundtrip
 )
 
 set(utils_unity_tests
@@ -144,6 +145,10 @@ add_safe_unity_test(
 add_safe_unity_test(
     dependents_config_roundtrip_smoke
     "${CMAKE_CURRENT_SOURCE_DIR}/regressions/dependents_config_roundtrip_smoke.c"
+)
+add_safe_unity_test(
+    validator_usage_iperf3_roundtrip
+    "${CMAKE_CURRENT_SOURCE_DIR}/regressions/validator_usage_iperf3_roundtrip.c"
 )
 
 if(ENABLE_CJSON_UTILS)
