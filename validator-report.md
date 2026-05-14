@@ -9,7 +9,7 @@ Phase: `impl_01_validator_baseline`
 - Validator checkout status: clean after `make unit`, `make check-testcases`, and the port matrix run.
 - Validated port commit: `6931be86ee3cd58469314c8b951d51a6413dc6c0`
 - Validated release tag: `build-6931be86ee3c`
-- Report commit: this final report commit, different from the validated port commit because package validation ran after the scaffold commit.
+- Report commit: `e059b758d835eb876282beaacf6fd8a44d62d7b2` (completed baseline report commit; different from the validated port commit because package validation ran after the scaffold commit).
 - Canonical packages: `libcjson1`, `libcjson-dev`
 
 ## Checks executed
