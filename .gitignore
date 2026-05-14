@@ -3,6 +3,7 @@
 /workflow.yaml
 /.ci/
 /.work/
+/validator/
 /build/
 /dist/
 /release-artifacts/
