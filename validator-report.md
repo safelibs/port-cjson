@@ -11,8 +11,8 @@ Phase: `impl_01_validator_baseline`
 - Validated port commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
 - Current validation artifact commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
 - Current validation release tag: `build-444180c22188`
-- Report commit: `e059b758d835eb876282beaacf6fd8a44d62d7b2`
-- Report SHA metadata correction commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
+- Report commit: `4ebeb99cd67bccafbce94ae42041c6540fd2c8cf`
+- Prior report SHA metadata correction commit: `444180c22188c48d21a43dfad0fd4340bc873d9e`
 - Canonical packages: `libcjson1`, `libcjson-dev`
 
 The current copied validation artifacts were regenerated from commit
