@@ -106,6 +106,28 @@ runtime behavior, including logfile/stdout top-level shape parity,
 cookie field handling, `test_start.omit` handling, receiver TCP congestion
 typing, CPU percentage bounds, and per-stream byte accounting.
 
+## Phase 2 source/API and CVE regression fixes
+
+Phase: `impl_02_source_regression_fixes`
+
+Initial classification of the preexisting Phase 1 result artifacts found no
+failed `source` or `regression` validator cases. No source/API or CVE
+regression implementation fixes are required for this phase, and no new local
+regression tests are needed before the required validation rerun.
+
+Preexisting source/API cases:
+
+- `allocator-hooks-edge`: passed
+- `malformed-number-rejection`: passed
+- `minify-whitespace`: passed
+- `parse-print-roundtrip`: passed
+- `utils-patch-pointer`: passed
+
+Preexisting CVE regression cases:
+
+- `cve-2023-26819`: passed
+- `cve-2025-57052`: passed
+
 ## Artifact paths
 
 - Port lock: `.work/validation/port-deb-lock.json`
