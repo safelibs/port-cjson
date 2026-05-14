@@ -5,14 +5,14 @@ Phase: `impl_01_validator_baseline`
 ## Baseline identity
 
 - Validator repository: https://github.com/safelibs/validator
-- Validator commit: `d1c08d01cd50b34a7aeb62c5630e28df0eb6cd97`
+- Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`
 - Validator checkout status: clean after `make unit`, `make check-testcases`, and the port matrix run.
 - Initial scaffold commit: `6931be86ee3cd58469314c8b951d51a6413dc6c0`
 - Validated port commit: the final phase `HEAD` reported by `git rev-parse HEAD`.
 - Report commit: the final phase `HEAD` reported by `git rev-parse HEAD`.
 - `SAFELIBS_COMMIT_SHA`: the same final phase `HEAD`; this is the value used by the required checker rerun.
-- Latest materialized artifact snapshot before this report correction: `e4a68fe7daea725fa760ad5858f9e8d796b36527`
-- Latest materialized release tag before this report correction: `build-e4a68fe7daea`
+- Latest materialized artifact snapshot before this report correction: `b3bd9c606df8a1fda1a0b028a95c1daaa4f5d448`
+- Latest materialized release tag before this report correction: `build-b3bd9c606df8`
 - Canonical packages: `libcjson1`, `libcjson-dev`
 
 The final report commit is intentionally described as the checked-out phase `HEAD`
@@ -46,15 +46,15 @@ from the final phase `HEAD`. The authoritative current lock metadata is
 
 Latest copied artifact snapshot before this report correction:
 
-- `libcjson1_1.7.17-1safelibs1+safelibs1778740567_amd64.deb`
-- `libcjson-dev_1.7.17-1safelibs1+safelibs1778740567_amd64.deb`
-- `libcjson1-dbgsym_1.7.17-1safelibs1+safelibs1778740567_amd64.ddeb`
-- Debian source/build metadata for `cjson_1.7.17-1safelibs1+safelibs1778740567`
+- `libcjson1_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`
+- `libcjson-dev_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`
+- `libcjson1-dbgsym_1.7.17-1safelibs1+safelibs1778794263_amd64.ddeb`
+- Debian source/build metadata for `cjson_1.7.17-1safelibs1+safelibs1778794263`
 
 Latest copied port lock metadata before this report correction:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778740567_amd64.deb`, sha256 `d888fd6434b23862675d7673b75c04ed5a86dd3e545152330fe3dd6ef6bd65ca`, size `557224`
-- `libcjson-dev`: `libcjson-dev_1.7.17-1safelibs1+safelibs1778740567_amd64.deb`, sha256 `f4d5dc36f49497906613521b240a85ce772c5d692f30983fd9d39b736da6a140`, size `9876`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`, sha256 `54ccdc5dc3056d4752b04ae8ae4fa59049cdf64eb46c69f11e8a075e83bc8ad4`, size `557624`
+- `libcjson-dev`: `libcjson-dev_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`, sha256 `886e718350e2b46747abb5dbc70606a88b68195169974118baa67bf5d7ed144b`, size `9876`
 - Unported original packages: none
 
 The validator port mode used `.deb` overrides from
@@ -65,15 +65,15 @@ The validator port mode used `.deb` overrides from
 
 Latest copied validator result summary before this report correction:
 
-- Cases: `253`
+- Cases: `273`
 - Source cases: `5`
-- Usage cases: `246`
+- Usage cases: `266`
 - Regression cases: `2`
-- Passed: `250`
-- Failed: `3`
-- Casts: `253`
+- Passed: `271`
+- Failed: `2`
+- Casts: `273`
 
-The result directory contains 253 non-summary testcase JSON files, matching the
+The result directory contains 273 non-summary testcase JSON files, matching the
 `cases` count in `summary.json`.
 
 Multiple checker reruns reproduced the same failure class but not a stable exact
@@ -87,12 +87,9 @@ current count supplied by the freshly regenerated `summary.json`.
 Failures observed in the latest copied artifacts were usage cases in the
 `iperf3` client family:
 
-- `usage-iperf3-json-end-cpu-host-total-percentage-bounds`
-  - Failure signal: CPU host total percentage predicate failed under port-mode
-    cjson JSON output.
-- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
-  - Failure signal: the per-stream receiver/sender byte closeness predicate
-    failed under port-mode cjson JSON output.
+- `usage-iperf3-json-cookie-field`
+  - Failure signal: the validator run could not complete this `iperf3` JSON
+    testcase under the port-mode cjson package.
 - `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
   - Failure signal: top-level key drift between stdout JSON and `--logfile`
     JSON; the logfile output included an extra `error` key.
@@ -101,11 +98,13 @@ Additional same-class failures observed across checker reruns:
 
 - `usage-iperf3-json-test-start-omit-zero-default`
 - `usage-iperf3-json-receiver-tcp-congestion-string`
+- `usage-iperf3-json-end-cpu-host-total-percentage-bounds`
+- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
 
 Next failure class: cjson compatibility for `iperf3` usage JSON emission and
 runtime behavior, including logfile/stdout top-level shape parity,
-`test_start.omit` handling, receiver TCP congestion typing, CPU percentage
-bounds, and per-stream byte accounting.
+cookie field handling, `test_start.omit` handling, receiver TCP congestion
+typing, CPU percentage bounds, and per-stream byte accounting.
 
 ## Artifact paths
 
