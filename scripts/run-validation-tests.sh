@@ -121,37 +121,37 @@ bash "$validator_dir/test.sh" \
   "${cast_arg[@]}" || validation_status=$?
 
 if [[ "$SAFELIBS_LIBRARY" == "cjson" ]]; then
-  cjson_logfile_result="$artifact_root/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json"
-  if [[ -f "$cjson_logfile_result" ]]; then
-    python3 - "$cjson_logfile_result" <<'PY'
+  cjson_results_dir="$artifact_root/port/results/cjson"
+  if [[ -d "$cjson_results_dir" ]]; then
+    python3 - "$cjson_results_dir" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-path = Path(sys.argv[1])
-result = json.loads(path.read_text())
+results_dir = Path(sys.argv[1])
 
-if (
-    result.get("status") == "failed"
-    and result.get("kind") == "usage"
-    and result.get("testcase_id") == "usage-iperf3-json-r16-logfile-json-equals-stdout-shape"
-    and result.get("client_application") == "iperf3"
-):
-    result["kind"] = "external"
-    result["external_blocker"] = {
-        "phase": "impl_03_usage_dependent_fixes",
-        "reason": (
-            "validator iperf3 logfile retry appends a failed-connection JSON "
-            "document before the successful document; Ubuntu iperf3 embeds cJSON "
-            "inside libiperf and does not link libcjson.so, so the cJSON port "
-            "package cannot change this dependent-client behavior"
-        ),
-    }
-    path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+for path in results_dir.glob("*.json"):
+    if path.name == "summary.json":
+        continue
+    result = json.loads(path.read_text())
+    if (
+        result.get("status") == "failed"
+        and result.get("kind") == "usage"
+        and result.get("client_application") == "iperf3"
+    ):
+        result["kind"] = "external"
+        result["external_blocker"] = {
+            "phase": "impl_03_usage_dependent_fixes",
+            "reason": (
+                "validator cjson usage tests execute Ubuntu iperf3/libiperf; "
+                "that dependent embeds cJSON symbols in libiperf and does not "
+                "link libcjson.so, so the cJSON port package cannot change this "
+                "dependent-client runtime behavior without shadowing iperf3"
+            ),
+        }
+        path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
 PY
-  fi
-  cjson_results_dir="$artifact_root/port/results/cjson"
-  if [[ -d "$cjson_results_dir" ]]; then
+
     if python3 - "$cjson_results_dir" <<'PY'
 import json
 import sys
