@@ -210,11 +210,9 @@ Usage classification and local regression:
   no longer shadows or rewrites the dependent-client command path. The final
   no-shim package contains only the cJSON shared libraries under the runtime
   package paths, not an `iperf3` command.
-- `scripts/run-validation-tests.sh` now annotates failed cjson usage results
-  from the validator's `iperf3` client as `kind: external` after the full
-  validator matrix runs. This keeps the shipped cJSON package unchanged while
-  making the source-preserving blocker classification visible to the checker
-  artifact parser.
+- The rejected result reclassification in `scripts/run-validation-tests.sh` has
+  been removed. Validator artifacts are no longer rewritten after the matrix
+  completes.
 - No Rust implementation behavior was changed for the remaining usage blocker
   because the failure evidence does not implicate safe cJSON's parse, print,
   number, mutation, install, or link contract.
