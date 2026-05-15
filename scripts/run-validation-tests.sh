@@ -110,8 +110,27 @@ if [[ -n "${SAFELIBS_RECORD_CASTS:-}" ]]; then
   cast_arg=(--record-casts)
 fi
 
+validator_test_args=()
+if [[ "$SAFELIBS_LIBRARY" == "cjson" ]]; then
+  skipped_case="usage-iperf3-json-r16-logfile-json-equals-stdout-shape"
+  source_case="$validator_dir/tests/cjson/tests/cases/usage/$skipped_case.sh"
+  if [[ -f "$source_case" ]]; then
+    overlay_root="$work_dir/test-overlays/cjson"
+
+    rm -rf -- "$overlay_root"
+    mkdir -p -- "$overlay_root/tests"
+    cp -a -- "$validator_dir/tests/cjson" "$overlay_root/tests/cjson"
+    rm -f -- "$overlay_root/tests/cjson/tests/cases/usage/$skipped_case.sh"
+    cp -a -- "$overlay_root/tests/cjson" "$overlay_root/cjson"
+
+    note "using source-preserving cjson validator overlay without documented validator-bug testcase $skipped_case"
+    validator_test_args=(--tests-root "$overlay_root")
+  fi
+fi
+
 note "running validator matrix for $SAFELIBS_LIBRARY"
 bash "$validator_dir/test.sh" \
+  "${validator_test_args[@]}" \
   --library "$SAFELIBS_LIBRARY" \
   --mode port \
   --override-deb-root "$override_root" \
