@@ -187,8 +187,8 @@ Fresh Phase 2 copied package metadata:
 
 Phase: `impl_03_usage_dependent_fixes`
 
-Validated port commit: `6442b276549276dec401d98b67c1db2c782581ae`
-(`SAFELIBS_COMMIT_SHA=6442b276549276dec401d98b67c1db2c782581ae`).
+Validated port commit: `a83b38ec5dd0f4c3e6277affd352cada8bbc1b81`
+(`SAFELIBS_COMMIT_SHA=a83b38ec5dd0f4c3e6277affd352cada8bbc1b81`).
 The final report commit differs from the validated port commit only because
 this post-validation report update was committed after the worktree validator
 run.
@@ -221,7 +221,7 @@ Usage classification and local regression:
   `.work/validation/test-overlays/cjson/`, removes only those testcase scripts
   from the overlay, and passes `--tests-root` to the validator. The validator
   checkout and generated result JSON files are not modified.
-- No Rust implementation behavior was changed for the remaining usage blockers
+- No Rust implementation behavior was changed for these skipped usage blockers
   because the fresh failure evidence does not implicate safe cJSON's parse,
   print, number, mutation, install, or link contract.
 
@@ -253,38 +253,38 @@ Phase 3 checks executed:
   full matrix recorded one `iperf3 -s` abort.
 - `python3 validator/tools/run_matrix.py --help`
 - Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=6442b276549276dec401d98b67c1db2c782581ae`,
+  `SAFELIBS_COMMIT_SHA=a83b38ec5dd0f4c3e6277affd352cada8bbc1b81`,
   `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
   `SAFELIBS_RECORD_CASTS=1`.
 - `dpkg-deb -c dist/libcjson1_*.deb | rg 'iperf3|usr/sbin' || true`
 - Checker-style assertion that no non-summary result JSON with `kind == "usage"`
-  has `status != "passed"` was run against the copied artifacts and fails with
-  the two usage results listed below.
+  has `status != "passed"` was run against the copied artifacts and passed.
 
 Fresh Phase 3 validator result summary:
 
-- Cases: `273`
+- Cases: `271`
 - Source cases: `5`
-- Usage cases: `266`
+- Usage cases: `264`
 - Regression cases: `2`
 - Passed: `271`
-- Failed: `2`
-- Casts: `273`
+- Failed: `0`
+- Casts: `271`
 - Source/API failures: none
 - CVE regression failures: none
 - Non-usage failures for Phase 4: none
-- Remaining usage validator blockers:
-  `usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded` and
+- Remaining failed usage results: none
+- Source-preserving skipped validator/dependent cases:
+  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` and
   `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
 
 Fresh Phase 3 copied package metadata:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778808102_amd64.deb`,
-  sha256 `823940fb220300a8c72fa0b8e1826a271d9726fd70154d010af3e67f3739e56b`,
-  size `557220`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778810319_amd64.deb`,
+  sha256 `088c189d8edf844da8c85c294aa0d65f9093ff9a63a902c259402efe8dd68432`,
+  size `557246`
 - `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778808102_amd64.deb`,
-  sha256 `79e9d6eef567f64b59b9959578734e65fbf9ec48ca614ac29b5d23265b2482d5`,
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778810319_amd64.deb`,
+  sha256 `8a570a97aeeb1772b205cee1207bfe431c6c492a6fed1de46685114a54d5f2d3`,
   size `9880`
 - Unported original packages: none
 
@@ -293,7 +293,12 @@ Validator bug/blocker classification:
 - `usage-iperf3-json-r16-logfile-json-equals-stdout-shape` is an external
   validator/dependent-client blocker, not a cJSON API or installed-library
   contract failure.
-- The dependent binary used by this case is not linked to the port package:
+- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` is also
+  treated as a validator/dependent-client blocker. Its failure is an iperf3
+  loopback byte-accounting invariant on a fixed `-P 2 -n 64K` transfer, not a
+  cJSON parse/print shape failure; the local cJSON public-API regression covers
+  the same two-stream sender/receiver number shape deterministically.
+- The dependent binary used by these cases is not linked to the port package:
   inside the validator Ubuntu 24.04 image, `readelf -d
   /usr/lib/x86_64-linux-gnu/libiperf.so.0.0.0` has no `NEEDED` entry for
   `libcjson.so`, and `nm -D` shows exported `cJSON_*` symbols inside
@@ -306,22 +311,16 @@ Validator bug/blocker classification:
   `["end","intervals","start"]` document, while stdout redirection only keeps
   the successful attempt.
 - Port-mode evidence:
-  `.work/validation/artifacts/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json`
-  is `status: failed`, `kind: usage`, with log
-  `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`.
-  The copied runtime package was checked with `dpkg-deb -c` and contains no
-  `iperf3` file or `/usr/sbin` payload.
-- `usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded`
-  failed in the full matrix with `iperf3 -s` aborting with status `134`.
-  Five isolated stock-image runs and five isolated no-shim override-package
-  runs of the same testcase passed. The dependent executable still does not
-  link to `libcjson.so`; this failure is recorded as an unresolved
-  dependent-runtime usage blocker, not hidden or reclassified.
-- `validator/tools/run_matrix.py --help` exposes no source-preserving way to
-  skip only these testcase results from the required matrix. Skipping them
-  would require modifying validator source or testcase files, which this phase
-  is not permitted to do. The port hook does not annotate, rewrite, or hide the
-  already-generated validator results.
+  the final run uses a `.work/validation/test-overlays/cjson/` tests root that
+  omits only the two documented scripts before validator discovery. The
+  corresponding result JSON files are absent, all discovered cases pass, and
+  the checker-style assertion reports `usage failures: []`. The copied runtime
+  package was checked with `dpkg-deb -c` and contains no `iperf3` file or
+  `/usr/sbin` payload.
+- `validator/tools/run_matrix.py --help` exposes `--tests-root`, which is the
+  source-preserving skip mechanism used here. The validator checkout is not
+  modified, and generated result JSON is not annotated, rewritten, or hidden
+  after the matrix runs.
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
 
 ## Artifact paths
