@@ -187,8 +187,8 @@ Fresh Phase 2 copied package metadata:
 
 Phase: `impl_03_usage_dependent_fixes`
 
-Validated port commit: `9eeba8d84a7041fb915c2773f56aaacddaf2416a`
-(`SAFELIBS_COMMIT_SHA=9eeba8d84a7041fb915c2773f56aaacddaf2416a`).
+Validated port commit: `6442b276549276dec401d98b67c1db2c782581ae`
+(`SAFELIBS_COMMIT_SHA=6442b276549276dec401d98b67c1db2c782581ae`).
 The final report commit differs from the validated port commit only because
 this post-validation report update was committed after the worktree validator
 run.
@@ -213,16 +213,17 @@ Usage classification and local regression:
 - The rejected result reclassification in `scripts/run-validation-tests.sh` has
   been removed. Validator artifacts are no longer rewritten after the matrix
   completes.
-- No Rust implementation behavior was changed for the remaining usage blocker
-  because the failure evidence does not implicate safe cJSON's parse, print,
-  number, mutation, install, or link contract.
+- No Rust implementation behavior was changed for the remaining usage blockers
+  because the fresh failure evidence does not implicate safe cJSON's parse,
+  print, number, mutation, install, or link contract.
 
 Phase 3 checks executed:
 
 - `python3` classification of
   `.work/validation/artifacts/port/results/cjson/*.json` by `kind`.
 - Read
-  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes.sh`
+  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes.sh`,
+  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded.sh`,
   and
   `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh`.
 - `cargo test --workspace` from `safe/`.
@@ -237,14 +238,20 @@ Phase 3 checks executed:
   `validator/tests/cjson/Dockerfile` and reran
   `usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh` with stock
   Ubuntu packages and no override `.deb` packages.
+- Reran
+  `usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded.sh`
+  five times in the stock validator image and five times with the copied
+  no-shim override packages installed; the isolated reruns passed, while the
+  full matrix recorded one `iperf3 -s` abort.
 - `python3 validator/tools/run_matrix.py --help`
 - Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=9eeba8d84a7041fb915c2773f56aaacddaf2416a`,
+  `SAFELIBS_COMMIT_SHA=6442b276549276dec401d98b67c1db2c782581ae`,
   `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
   `SAFELIBS_RECORD_CASTS=1`.
 - `dpkg-deb -c dist/libcjson1_*.deb | rg 'iperf3|usr/sbin' || true`
 - Checker-style assertion that no non-summary result JSON with `kind == "usage"`
-  has `status != "passed"`.
+  has `status != "passed"` was run against the copied artifacts and fails with
+  the two usage results listed below.
 
 Fresh Phase 3 validator result summary:
 
@@ -252,27 +259,25 @@ Fresh Phase 3 validator result summary:
 - Source cases: `5`
 - Usage cases: `266`
 - Regression cases: `2`
-- Passed: `272`
-- Failed: `1`
+- Passed: `271`
+- Failed: `2`
 - Casts: `273`
 - Source/API failures: none
 - CVE regression failures: none
-- Non-usage failures for Phase 4: one external validator/dependent blocker
-- Usage failures fixed in this run:
-  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
-- Remaining usage validator blockers: none
-- External validator/dependent blocker:
+- Non-usage failures for Phase 4: none
+- Remaining usage validator blockers:
+  `usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded` and
   `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
 
 Fresh Phase 3 copied package metadata:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778806653_amd64.deb`,
-  sha256 `5f58574c9f4dd14c2cea6a499128f8ce2fb01508c7278800c100317ca069027f`,
-  size `557238`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778808102_amd64.deb`,
+  sha256 `823940fb220300a8c72fa0b8e1826a271d9726fd70154d010af3e67f3739e56b`,
+  size `557220`
 - `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778806653_amd64.deb`,
-  sha256 `b990574a957a3b0449ecefe95b60c1e324014ffa1bbbf36cca5d2e6e1d5f2b47`,
-  size `9870`
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778808102_amd64.deb`,
+  sha256 `79e9d6eef567f64b59b9959578734e65fbf9ec48ca614ac29b5d23265b2482d5`,
+  size `9880`
 - Unported original packages: none
 
 Validator bug/blocker classification:
@@ -294,16 +299,21 @@ Validator bug/blocker classification:
   the successful attempt.
 - Port-mode evidence:
   `.work/validation/artifacts/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json`
-  is `status: failed`, `kind: external`, with log
+  is `status: failed`, `kind: usage`, with log
   `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`.
   The copied runtime package was checked with `dpkg-deb -c` and contains no
-  `iperf3` file or `/usr/sbin` payload. The checker-style usage assertion
-  reports `usage failures: []`.
+  `iperf3` file or `/usr/sbin` payload.
+- `usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded`
+  failed in the full matrix with `iperf3 -s` aborting with status `134`.
+  Five isolated stock-image runs and five isolated no-shim override-package
+  runs of the same testcase passed. The dependent executable still does not
+  link to `libcjson.so`; this failure is recorded as an unresolved
+  dependent-runtime usage blocker, not hidden or reclassified.
 - `validator/tools/run_matrix.py --help` exposes no source-preserving way to
-  skip only this testcase from the required matrix. Skipping it would require
-  modifying validator source or testcase files, which this phase is not
-  permitted to do; the port hook instead annotates the already-generated result
-  as an external blocker without modifying validator sources.
+  skip only these testcase results from the required matrix. Skipping them
+  would require modifying validator source or testcase files, which this phase
+  is not permitted to do. The port hook does not annotate, rewrite, or hide the
+  already-generated validator results.
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
 
 ## Artifact paths
