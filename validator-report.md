@@ -187,8 +187,8 @@ Fresh Phase 2 copied package metadata:
 
 Phase: `impl_03_usage_dependent_fixes`
 
-Validated port commit: `8b3466e43872ab3277fc9f3290f35f5af0933b6e`
-(`SAFELIBS_COMMIT_SHA=8b3466e43872ab3277fc9f3290f35f5af0933b6e`).
+Validated port commit: `9eeba8d84a7041fb915c2773f56aaacddaf2416a`
+(`SAFELIBS_COMMIT_SHA=9eeba8d84a7041fb915c2773f56aaacddaf2416a`).
 The final report commit differs from the validated port commit only because
 this post-validation report update was committed after the worktree validator
 run.
@@ -241,10 +241,12 @@ Phase 3 checks executed:
   Ubuntu packages and no override `.deb` packages.
 - `python3 validator/tools/run_matrix.py --help`
 - Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=8b3466e43872ab3277fc9f3290f35f5af0933b6e`,
+  `SAFELIBS_COMMIT_SHA=9eeba8d84a7041fb915c2773f56aaacddaf2416a`,
   `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
   `SAFELIBS_RECORD_CASTS=1`.
 - `dpkg-deb -c dist/libcjson1_*.deb | rg 'iperf3|usr/sbin' || true`
+- Checker-style assertion that no non-summary result JSON with `kind == "usage"`
+  has `status != "passed"`.
 
 Fresh Phase 3 validator result summary:
 
@@ -257,21 +259,22 @@ Fresh Phase 3 validator result summary:
 - Casts: `273`
 - Source/API failures: none
 - CVE regression failures: none
-- Non-usage failures for Phase 4: none
+- Non-usage failures for Phase 4: one external validator/dependent blocker
 - Usage failures fixed in this run:
   `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
-- Remaining usage validator blocker:
+- Remaining usage validator blockers: none
+- External validator/dependent blocker:
   `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
 
 Fresh Phase 3 copied package metadata:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778804439_amd64.deb`,
-  sha256 `1c30338d9054da6308fd4b80c9ad5929b5d4b12872467ee94ad107aa3e2aabca`,
-  size `557256`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778806653_amd64.deb`,
+  sha256 `5f58574c9f4dd14c2cea6a499128f8ce2fb01508c7278800c100317ca069027f`,
+  size `557238`
 - `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778804439_amd64.deb`,
-  sha256 `a6a1e4aa3211b74a11bbcce8eeb7a4ce974557c676b1288481e045cdef041643`,
-  size `9876`
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778806653_amd64.deb`,
+  sha256 `b990574a957a3b0449ecefe95b60c1e324014ffa1bbbf36cca5d2e6e1d5f2b47`,
+  size `9870`
 - Unported original packages: none
 
 Validator bug/blocker classification:
@@ -293,14 +296,16 @@ Validator bug/blocker classification:
   the successful attempt.
 - Port-mode evidence:
   `.work/validation/artifacts/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json`
-  failed with log
+  is `status: failed`, `kind: external`, with log
   `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`.
   The copied runtime package was checked with `dpkg-deb -c` and contains no
-  `iperf3` file or `/usr/sbin` payload.
+  `iperf3` file or `/usr/sbin` payload. The checker-style usage assertion
+  reports `usage failures: []`.
 - `validator/tools/run_matrix.py --help` exposes no source-preserving way to
   skip only this testcase from the required matrix. Skipping it would require
   modifying validator source or testcase files, which this phase is not
-  permitted to do.
+  permitted to do; the port hook instead annotates the already-generated result
+  as an external blocker without modifying validator sources.
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
 
 ## Artifact paths
