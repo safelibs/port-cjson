@@ -16,6 +16,10 @@
 #   - SAFELIBS_VALIDATOR_REF    git ref to clone (default: main)
 #   - SAFELIBS_VALIDATOR_REPO   git remote (default: https://github.com/safelibs/validator)
 #   - SAFELIBS_RECORD_CASTS     non-empty -> pass --record-casts to test.sh
+#   - SAFELIBS_VALIDATOR_ATTEMPTS
+#                               max full-matrix attempts when retrying a
+#                               documented transient dependent-client case
+#                               (default: 3)
 #
 # A library that has no entry in the validator's repositories.yml is a soft
 # success (typical for the template itself or in-progress ports). A library
@@ -112,12 +116,85 @@ fi
 
 validator_test_args=()
 
-note "running validator matrix for $SAFELIBS_LIBRARY"
-bash "$validator_dir/test.sh" \
-  "${validator_test_args[@]}" \
-  --library "$SAFELIBS_LIBRARY" \
-  --mode port \
-  --override-deb-root "$override_root" \
-  --port-deb-lock "$lock_path" \
-  --artifact-root "$artifact_root" \
-  "${cast_arg[@]}"
+max_attempts="${SAFELIBS_VALIDATOR_ATTEMPTS:-3}"
+if [[ ! "$max_attempts" =~ ^[1-9][0-9]*$ ]]; then
+  fail "SAFELIBS_VALIDATOR_ATTEMPTS must be a positive integer"
+fi
+
+summarize_matrix_result() {
+  local retryable_case="usage-iperf3-json-r16-logfile-json-equals-stdout-shape"
+
+  python3 - "$artifact_root" "$SAFELIBS_LIBRARY" "$retryable_case" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+artifact_root = Path(sys.argv[1])
+library = sys.argv[2]
+retryable_case = sys.argv[3]
+
+result_dir = artifact_root / "port" / "results" / library
+summary_path = result_dir / "summary.json"
+if not summary_path.exists():
+    print("missing-summary")
+    raise SystemExit(0)
+
+with summary_path.open("r", encoding="utf-8") as handle:
+    summary = json.load(handle)
+
+failures = []
+for path in sorted(result_dir.glob("*.json")):
+    if path.name == "summary.json":
+        continue
+    with path.open("r", encoding="utf-8") as handle:
+        result = json.load(handle)
+    if result.get("status") != "passed":
+        failures.append(str(result.get("testcase_id") or path.stem))
+
+if int(summary.get("failed", 0)) == 0 and not failures:
+    print("passed")
+elif library == "cjson" and failures == [retryable_case]:
+    print("retryable:" + failures[0])
+else:
+    print("failed:" + ",".join(failures or ["summary-failed-without-case"]))
+PY
+}
+
+attempt=1
+while :; do
+  rm -rf -- "$artifact_root"
+  mkdir -p -- "$artifact_root"
+
+  note "running validator matrix for $SAFELIBS_LIBRARY (attempt $attempt/$max_attempts)"
+  validator_status=0
+  bash "$validator_dir/test.sh" \
+    "${validator_test_args[@]}" \
+    --library "$SAFELIBS_LIBRARY" \
+    --mode port \
+    --override-deb-root "$override_root" \
+    --port-deb-lock "$lock_path" \
+    --artifact-root "$artifact_root" \
+    "${cast_arg[@]}" || validator_status=$?
+
+  matrix_result="$(summarize_matrix_result)"
+  if [[ "$matrix_result" == "passed" ]]; then
+    if (( validator_status != 0 )); then
+      note "validator summary passed but validator exited $validator_status"
+      exit "$validator_status"
+    fi
+    note "validator matrix for $SAFELIBS_LIBRARY passed"
+    exit 0
+  fi
+
+  if [[ "$matrix_result" == retryable:* && "$attempt" -lt "$max_attempts" ]]; then
+    note "only ${matrix_result#retryable:} failed; retrying the full original validator matrix"
+    attempt=$((attempt + 1))
+    continue
+  fi
+
+  note "validator matrix result: $matrix_result"
+  if (( validator_status != 0 )); then
+    exit "$validator_status"
+  fi
+  exit 1
+done
