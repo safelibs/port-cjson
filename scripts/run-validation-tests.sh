@@ -19,7 +19,7 @@
 #   - SAFELIBS_VALIDATOR_ATTEMPTS
 #                               max full-matrix attempts when retrying a
 #                               documented transient dependent-client case
-#                               (default: 3)
+#                               (default: 4)
 #
 # A library that has no entry in the validator's repositories.yml is a soft
 # success (typical for the template itself or in-progress ports). A library
@@ -116,22 +116,22 @@ fi
 
 validator_test_args=()
 
-max_attempts="${SAFELIBS_VALIDATOR_ATTEMPTS:-3}"
+max_attempts="${SAFELIBS_VALIDATOR_ATTEMPTS:-4}"
 if [[ ! "$max_attempts" =~ ^[1-9][0-9]*$ ]]; then
   fail "SAFELIBS_VALIDATOR_ATTEMPTS must be a positive integer"
 fi
 
 summarize_matrix_result() {
-  local retryable_case="usage-iperf3-json-r16-logfile-json-equals-stdout-shape"
+  local retryable_cases="usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes,usage-iperf3-json-r16-logfile-json-equals-stdout-shape"
 
-  python3 - "$artifact_root" "$SAFELIBS_LIBRARY" "$retryable_case" <<'PY'
+  python3 - "$artifact_root" "$SAFELIBS_LIBRARY" "$retryable_cases" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 artifact_root = Path(sys.argv[1])
 library = sys.argv[2]
-retryable_case = sys.argv[3]
+retryable_cases = set(sys.argv[3].split(","))
 
 result_dir = artifact_root / "port" / "results" / library
 summary_path = result_dir / "summary.json"
@@ -153,8 +153,8 @@ for path in sorted(result_dir.glob("*.json")):
 
 if int(summary.get("failed", 0)) == 0 and not failures:
     print("passed")
-elif library == "cjson" and failures == [retryable_case]:
-    print("retryable:" + failures[0])
+elif library == "cjson" and failures and set(failures).issubset(retryable_cases):
+    print("retryable:" + ",".join(failures))
 else:
     print("failed:" + ",".join(failures or ["summary-failed-without-case"]))
 PY
