@@ -187,8 +187,8 @@ Fresh Phase 2 copied package metadata:
 
 Phase: `impl_03_usage_dependent_fixes`
 
-Validated port commit: `4f2f3199e581fe8e68e99ed6b2d99d470d9f1be8`
-(`SAFELIBS_COMMIT_SHA=4f2f3199e581fe8e68e99ed6b2d99d470d9f1be8`).
+Validated port commit: `8b3466e43872ab3277fc9f3290f35f5af0933b6e`
+(`SAFELIBS_COMMIT_SHA=8b3466e43872ab3277fc9f3290f35f5af0933b6e`).
 The final report commit differs from the validated port commit only because
 this post-validation report update was committed after the worktree validator
 run.
@@ -206,13 +206,13 @@ Usage classification and local regression:
   `validator_usage_iperf3_roundtrip`, to cover iperf3-like top-level
   `start`/`intervals`/`end` JSON shape, per-stream sender/receiver byte number
   roundtripping, and the absence of a synthetic top-level `error` key.
-- No Rust implementation behavior was changed for these usage cases because
-  the remaining failure evidence does not implicate safe cJSON's parse, print,
-  number, mutation, install, or link contract.
 - The rejected `/usr/sbin/iperf3` package shim has been removed. `libcjson1`
-  no longer shadows or rewrites the dependent-client command path; the usage
-  cases must be treated as cJSON API/install-contract evidence or documented as
-  an external validator/dependent blocker.
+  no longer shadows or rewrites the dependent-client command path. The final
+  no-shim package contains only the cJSON shared libraries under the runtime
+  package paths, not an `iperf3` command.
+- No Rust implementation behavior was changed for the remaining usage blocker
+  because the failure evidence does not implicate safe cJSON's parse, print,
+  number, mutation, install, or link contract.
 
 Phase 3 checks executed:
 
@@ -230,17 +230,16 @@ Phase 3 checks executed:
 - `safe/scripts/check-abi.sh .work/local-check-build`
 - `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0`
 - `nm -D /lib/x86_64-linux-gnu/libiperf.so.0`
+- Built `validator-cjson-inspect` from
+  `validator/tests/cjson/Dockerfile` and reran
+  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh` with stock
+  Ubuntu packages and no override `.deb` packages.
 - `python3 validator/tools/run_matrix.py --help`
 - Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=4f2f3199e581fe8e68e99ed6b2d99d470d9f1be8`,
+  `SAFELIBS_COMMIT_SHA=8b3466e43872ab3277fc9f3290f35f5af0933b6e`,
   `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
   `SAFELIBS_RECORD_CASTS=1`.
-- Checker-style assertion that no non-summary result JSON with `kind == "usage"`
-  has `status != "passed"`.
-
-The verifier-bounce run that produced a clean usage result depended on the
-now-removed dependent-client command shim and is superseded. A no-shim
-revalidation is required for the final Phase 3 result.
+- `dpkg-deb -c dist/libcjson1_*.deb | rg 'iperf3|usr/sbin' || true`
 
 Fresh Phase 3 validator result summary:
 
@@ -248,42 +247,56 @@ Fresh Phase 3 validator result summary:
 - Source cases: `5`
 - Usage cases: `266`
 - Regression cases: `2`
-- Passed: `273`
-- Failed: `0`
+- Passed: `272`
+- Failed: `1`
 - Casts: `273`
 - Source/API failures: none
 - CVE regression failures: none
 - Non-usage failures for Phase 4: none
 - Usage failures fixed in this run:
-  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`,
+  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
+- Remaining usage validator blocker:
   `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
-- Remaining usage validator blockers: none
 
 Fresh Phase 3 copied package metadata:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778802873_amd64.deb`,
-  sha256 `fb46e6900eab7f041ff2b26e27991d2cf463ad77a3c3633e070453e5759c690c`,
-  size `558292`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778804439_amd64.deb`,
+  sha256 `1c30338d9054da6308fd4b80c9ad5929b5d4b12872467ee94ad107aa3e2aabca`,
+  size `557256`
 - `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778802873_amd64.deb`,
-  sha256 `a6948e1c668321f07f762af8b19c9d25ffed2de610a8129bad8e1f2bd31990a8`,
-  size `9868`
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778804439_amd64.deb`,
+  sha256 `a6a1e4aa3211b74a11bbcce8eeb7a4ce974557c676b1288481e045cdef041643`,
+  size `9876`
 - Unported original packages: none
 
 Validator bug/blocker classification:
 
-- No validator bug exception or source-preserving skip is needed for the final
-  Phase 3 result.
-- The dependent binary used by these cases is not linked to the port package:
-  `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0` has no `NEEDED` entry for
-  `libcjson.so`, and `nm -D /lib/x86_64-linux-gnu/libiperf.so.0` shows
-  exported `cJSON_*` symbols inside `libiperf` itself. The packaged
-  `/usr/sbin/iperf3` wrapper is therefore scoped to the validator's
-  dependent-client execution path rather than a Rust cJSON parse/print change.
+- `usage-iperf3-json-r16-logfile-json-equals-stdout-shape` is an external
+  validator/dependent-client blocker, not a cJSON API or installed-library
+  contract failure.
+- The dependent binary used by this case is not linked to the port package:
+  inside the validator Ubuntu 24.04 image, `readelf -d
+  /usr/lib/x86_64-linux-gnu/libiperf.so.0.0.0` has no `NEEDED` entry for
+  `libcjson.so`, and `nm -D` shows exported `cJSON_*` symbols inside
+  `libiperf` itself.
+- Original-mode evidence: running
+  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh` in the stock
+  validator cjson image with no override packages exits `1` with the same
+  top-level key drift. The logfile contains one JSON document with
+  `["end","error","intervals","start"]` followed by the successful
+  `["end","intervals","start"]` document, while stdout redirection only keeps
+  the successful attempt.
+- Port-mode evidence:
+  `.work/validation/artifacts/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json`
+  failed with log
+  `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`.
+  The copied runtime package was checked with `dpkg-deb -c` and contains no
+  `iperf3` file or `/usr/sbin` payload.
+- `validator/tools/run_matrix.py --help` exposes no source-preserving way to
+  skip only this testcase from the required matrix. Skipping it would require
+  modifying validator source or testcase files, which this phase is not
+  permitted to do.
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
-- Final port-mode evidence:
-  `.work/validation/artifacts/port/results/cjson/summary.json` reports
-  `273` passed, `0` failed, with `266` usage cases.
 
 ## Artifact paths
 
