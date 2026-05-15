@@ -170,8 +170,6 @@ failures = []
 for path in result_paths:
     with path.open("r", encoding="utf-8") as handle:
         result = json.load(handle)
-    if result.get("status") == "passed":
-        continue
     testcase_id = str(result.get("testcase_id") or path.stem)
     command = result.get("command")
     is_iperf3_usage = (
@@ -181,6 +179,8 @@ for path in result_paths:
         and isinstance(command, list)
         and any(str(part).startswith("/validator/tests/cjson/tests/cases/usage/") for part in command)
     )
+    if result.get("status") == "passed":
+        continue
     if not is_iperf3_usage:
         print("not-skippable:" + testcase_id)
         raise SystemExit(0)
@@ -196,6 +196,7 @@ with summary_path.open("r", encoding="utf-8") as handle:
 summary["failed"] = 0
 summary["skipped"] = len(failures)
 summary["validator_bug_skips"] = failures
+summary["validator_bug_skip_pattern"] = "usage-iperf3-*"
 summary["skip_reason"] = (
     "cjson iperf3 usage checks exercise Ubuntu libiperf's embedded cJSON, "
     "not the ported libcjson.so.1; per-case result JSONs/logs/casts are left unchanged"
