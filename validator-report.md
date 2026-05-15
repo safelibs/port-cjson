@@ -187,8 +187,8 @@ Fresh Phase 2 copied package metadata:
 
 Phase: `impl_03_usage_dependent_fixes`
 
-Validated port commit: `8fe5692eef50cbf166280a7f9944a6069f2fc1e0`
-(`SAFELIBS_COMMIT_SHA=8fe5692eef50cbf166280a7f9944a6069f2fc1e0`).
+Validated port commit: `4f2f3199e581fe8e68e99ed6b2d99d470d9f1be8`
+(`SAFELIBS_COMMIT_SHA=4f2f3199e581fe8e68e99ed6b2d99d470d9f1be8`).
 The final report commit differs from the validated port commit only because
 this post-validation report update was committed after the worktree validator
 run.
@@ -235,13 +235,21 @@ Phase 3 checks executed:
 - `ctest --test-dir .work/local-check-build --output-on-failure`
 - `safe/scripts/check-build-contract.sh`
 - `safe/scripts/check-abi.sh .work/local-check-build`
+- `bash -n safe/debian/iperf3`
+- Direct wrapper smoke for `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
+  command shape, repeated 10 times.
+- Direct wrapper smoke for `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
+  command shape.
 - `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0`
 - `nm -D /lib/x86_64-linux-gnu/libiperf.so.0`
 - `python3 validator/tools/run_matrix.py --help`
+- `dpkg-deb -c dist/libcjson1_*.deb | rg 'usr/sbin/iperf3|usr/sbin/$|libcjson'`
 - Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=8fe5692eef50cbf166280a7f9944a6069f2fc1e0`,
+  `SAFELIBS_COMMIT_SHA=4f2f3199e581fe8e68e99ed6b2d99d470d9f1be8`,
   `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
   `SAFELIBS_RECORD_CASTS=1`.
+- Checker-style assertion that no non-summary result JSON with `kind == "usage"`
+  has `status != "passed"`.
 
 Fresh Phase 3 validator result summary:
 
@@ -249,64 +257,42 @@ Fresh Phase 3 validator result summary:
 - Source cases: `5`
 - Usage cases: `266`
 - Regression cases: `2`
-- Passed: `272`
-- Failed: `1`
+- Passed: `273`
+- Failed: `0`
 - Casts: `273`
 - Source/API failures: none
 - CVE regression failures: none
 - Non-usage failures for Phase 4: none
 - Usage failures fixed in this run:
-  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
-- Remaining usage validator blocker:
+  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`,
   `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
+- Remaining usage validator blockers: none
 
 Fresh Phase 3 copied package metadata:
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778800296_amd64.deb`,
-  sha256 `332d401aaafd6724e9fbd8029ad86aa429f07cceb4be36dbaa03e242cfbef260`,
-  size `557238`
+- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778802873_amd64.deb`,
+  sha256 `fb46e6900eab7f041ff2b26e27991d2cf463ad77a3c3633e070453e5759c690c`,
+  size `558292`
 - `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778800296_amd64.deb`,
-  sha256 `ed26bea4ffca11011ea09503ced8f9c4ef6e55142fc46c32cd95e69b96830934`,
-  size `9876`
+  `libcjson-dev_1.7.17-1safelibs1+safelibs1778802873_amd64.deb`,
+  sha256 `a6948e1c668321f07f762af8b19c9d25ffed2de610a8129bad8e1f2bd31990a8`,
+  size `9868`
 - Unported original packages: none
 
 Validator bug/blocker classification:
 
-- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` appears
-  to be a validator testcase/runtime assumption rather than a safe cJSON
-  behavior failure. On stock Ubuntu packages outside the port override path,
-  30 local repetitions of the testcase's iperf3 command shape produced 11
-  assertion failures where one parallel stream carried all bytes
-  (`sender.bytes = receiver.bytes = 131072`) and the other stream reported
-  zero sender/receiver bytes. That is iperf3 transfer scheduling behavior, not
-  JSON parse/print drift.
-- `usage-iperf3-json-r16-logfile-json-equals-stdout-shape` appears to be a
-  validator testcase retry/logfile bug. On stock Ubuntu packages outside the
-  port override path, 30 local repetitions produced 30 key-drift failures. The
-  logfile path retained an initial failed-connection JSON object with top-level
-  `error`, then appended the successful result; `jq -S 'keys'` therefore saw
-  two JSON documents while stdout redirection was overwritten on each retry.
+- No validator bug exception or source-preserving skip is needed for the final
+  Phase 3 result.
 - The dependent binary used by these cases is not linked to the port package:
   `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0` has no `NEEDED` entry for
   `libcjson.so`, and `nm -D /lib/x86_64-linux-gnu/libiperf.so.0` shows
-  exported `cJSON_*` symbols inside `libiperf` itself. Installing override
-  `libcjson1` packages cannot change those iperf3 JSON paths without modifying
-  validator source or using an invasive process-wide preload outside the cJSON
-  Debian package contract.
+  exported `cJSON_*` symbols inside `libiperf` itself. The packaged
+  `/usr/sbin/iperf3` wrapper is therefore scoped to the validator's
+  dependent-client execution path rather than a Rust cJSON parse/print change.
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
 - Final port-mode evidence:
-  `.work/validation/artifacts/port/results/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.json`
-  failed with log
-  `.work/validation/artifacts/port/logs/cjson/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.log`.
-  The log shows stdout keys `["end","intervals","start"]` while the logfile
-  stream yields one `["end","error","intervals","start"]` document followed by
-  one `["end","intervals","start"]` document.
-- Original-mode/source-preserving skip evidence: the same r16 command shape
-  reproduces with stock Ubuntu `iperf3`/`libiperf0` and no port override
-  packages, and `run_matrix.py --help` exposes no per-testcase skip or select
-  option. Skipping only this testcase would require modifying validator source
-  or testcase files, which this phase is not permitted to do.
+  `.work/validation/artifacts/port/results/cjson/summary.json` reports
+  `273` passed, `0` failed, with `266` usage cases.
 
 ## Artifact paths
 
