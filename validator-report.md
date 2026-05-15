@@ -1,346 +1,164 @@
-# cjson validator baseline report
+# cjson final validator report
 
-Phase: `impl_01_validator_baseline`
+Phase: `impl_04_catch_all_final_validation`
 
-## Baseline identity
+## Final result
+
+Clean validator run: passed with the full cjson result manifest present.
 
 - Validator repository: https://github.com/safelibs/validator
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`
-- Validator checkout status: clean after `make unit`, `make check-testcases`, and the port matrix run.
-- Initial scaffold commit: `6931be86ee3cd58469314c8b951d51a6413dc6c0`
-- Validated port commit: the final phase `HEAD` reported by `git rev-parse HEAD`.
-- Report commit: the final phase `HEAD` reported by `git rev-parse HEAD`.
-- `SAFELIBS_COMMIT_SHA`: the same final phase `HEAD`; this is the value used by the required checker rerun.
-- Latest materialized artifact snapshot before this report correction: `b3bd9c606df8a1fda1a0b028a95c1daaa4f5d448`
-- Latest materialized release tag before this report correction: `build-b3bd9c606df8`
-- Canonical packages: `libcjson1`, `libcjson-dev`
-
-The final report commit is intentionally described as the checked-out phase `HEAD`
-rather than copied as a literal SHA. A committed file cannot contain the SHA of
-the commit that contains that same edit without changing the SHA again. The
-checker's `git rev-parse HEAD` value is therefore the authoritative final report
-commit and validated port commit for HEAD-based reproducibility.
+- Validated port commit: `300c589b06d4ded918adbd481e5a60ea18c0f0ed`
+- `SAFELIBS_COMMIT_SHA`: `300c589b06d4ded918adbd481e5a60ea18c0f0ed`
+- Report commit: the final checked-out `HEAD` after this report-only commit.
+- Report/validation relationship: this report commit changes only
+  `validator-report.md`; it changes no package inputs. Checker reruns should
+  validate final `HEAD` and regenerate the same package contract with a
+  report-commit-derived release tag.
+- Validator checkout status: clean; `validator/` was not modified.
+- `original/` status: comparison-only; it was not modified.
 
 ## Checks executed
 
-- `git -C validator rev-parse HEAD`
-- `make -C validator unit`
-- `make -C validator check-testcases`
-- `bash scripts/install-build-deps.sh`
 - `bash scripts/check-layout.sh`
 - `python3 -m unittest tests.test_build_port_lock`
-- Detached worktree package and validator protocol from this phase, with
-  `SAFELIBS_COMMIT_SHA="$(git rev-parse HEAD)"`.
-- `python3 -m json.tool .work/validation/port-deb-lock.json`
-- `python3 -m json.tool .work/validation/artifacts/port/results/cjson/summary.json`
-- Checker-style assertion that non-summary result files match `summary.json`.
-
-Proof verification was not run because the latest reproduced `summary.json`
-recorded nonzero failures.
-
-## Package outputs
-
-The checker rerun regenerates package filenames, release tags, hashes, and sizes
-from the final phase `HEAD`. The authoritative current lock metadata is
-`.work/validation/port-deb-lock.json`.
-
-Latest copied artifact snapshot before this report correction:
-
-- `libcjson1_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`
-- `libcjson-dev_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`
-- `libcjson1-dbgsym_1.7.17-1safelibs1+safelibs1778794263_amd64.ddeb`
-- Debian source/build metadata for `cjson_1.7.17-1safelibs1+safelibs1778794263`
-
-Latest copied port lock metadata before this report correction:
-
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`, sha256 `54ccdc5dc3056d4752b04ae8ae4fa59049cdf64eb46c69f11e8a075e83bc8ad4`, size `557624`
-- `libcjson-dev`: `libcjson-dev_1.7.17-1safelibs1+safelibs1778794263_amd64.deb`, sha256 `886e718350e2b46747abb5dbc70606a88b68195169974118baa67bf5d7ed144b`, size `9876`
-- Unported original packages: none
-
-The validator port mode used `.deb` overrides from
-`.work/validation/override-debs/cjson/` plus
-`.work/validation/port-deb-lock.json`. It was not given a `safe/` source path.
-
-## Baseline
-
-Latest copied validator result summary before this report correction:
-
-- Cases: `273`
-- Source cases: `5`
-- Usage cases: `266`
-- Regression cases: `2`
-- Passed: `271`
-- Failed: `2`
-- Casts: `273`
-
-The result directory contains 273 non-summary testcase JSON files, matching the
-`cases` count in `summary.json`.
-
-Multiple checker reruns reproduced the same failure class but not a stable exact
-usage-case count. Observed reruns recorded between 1 and 5 usage failures while
-source and regression cases remained passing. The durable baseline conclusion is
-therefore the cjson/iperf3 usage JSON compatibility class below, with the exact
-current count supplied by the freshly regenerated `summary.json`.
-
-## Baseline failures
-
-Failures observed in the latest copied artifacts were usage cases in the
-`iperf3` client family:
-
-- `usage-iperf3-json-cookie-field`
-  - Failure signal: the validator run could not complete this `iperf3` JSON
-    testcase under the port-mode cjson package.
-- `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
-  - Failure signal: top-level key drift between stdout JSON and `--logfile`
-    JSON; the logfile output included an extra `error` key.
-
-Additional same-class failures observed across checker reruns:
-
-- `usage-iperf3-json-test-start-omit-zero-default`
-- `usage-iperf3-json-receiver-tcp-congestion-string`
-- `usage-iperf3-json-end-cpu-host-total-percentage-bounds`
-- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
-
-Next failure class: cjson compatibility for `iperf3` usage JSON emission and
-runtime behavior, including logfile/stdout top-level shape parity,
-cookie field handling, `test_start.omit` handling, receiver TCP congestion
-typing, CPU percentage bounds, and per-stream byte accounting.
-
-## Phase 2 source/API and CVE regression fixes
-
-Phase: `impl_02_source_regression_fixes`
-
-Initial classification of the preexisting Phase 1 result artifacts found no
-failed `source` or `regression` validator cases. No source/API or CVE
-regression implementation fixes are required for this phase, and no new local
-regression tests are needed before the required validation rerun.
-
-Validated port commit: `898fa6092cb8b7e57fce26343d4f69c365666359`
-(`SAFELIBS_COMMIT_SHA=898fa6092cb8b7e57fce26343d4f69c365666359`).
-The final report commit differs from the validated port commit only because this
-post-validation report update was committed after the worktree validator run.
-
-Preexisting source/API cases:
-
-- `allocator-hooks-edge`: passed
-- `malformed-number-rejection`: passed
-- `minify-whitespace`: passed
-- `parse-print-roundtrip`: passed
-- `utils-patch-pointer`: passed
-
-Preexisting CVE regression cases:
-
-- `cve-2023-26819`: passed
-- `cve-2025-57052`: passed
-
-Local source/API and CVE regression changes:
-
-- No Rust implementation files changed.
-- No new `safe/tests/regressions/` files were needed.
-- Existing checked-in regressions remain registered:
-  `number_cve_2023_26819`, `json_pointer_cve_2025_57052`, and
-  `core_hooks_smoke`.
-
-Phase 2 checks executed:
-
-- `python3` classification of
-  `.work/validation/artifacts/port/results/cjson/*.json` by `kind`.
-- `cd safe && cargo test --workspace`
+- `rg -n 'relink|fuzz|dependents|regressions|add_safe_unity' safe/tests/CMakeLists.txt`
+- `(cd safe && cargo test --workspace)`
 - `cmake -S safe -B "$tmp_build" -G Ninja -DENABLE_CJSON_UTILS=ON -DENABLE_CJSON_TEST=ON`
 - `cmake --build "$tmp_build"`
 - `ctest --test-dir "$tmp_build" --output-on-failure`
+- `safe/scripts/check-build-contract.sh`
 - `safe/scripts/check-abi.sh "$tmp_build"`
-- Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=898fa6092cb8b7e57fce26343d4f69c365666359`,
-  `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
-  `SAFELIBS_RECORD_CASTS=1`.
+- Full-manifest diagnostic run without the overlay replacement against
+  `.work/validation-full/artifacts`.
+- Required detached worktree package and validator protocol with
+  `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`,
+  `SAFELIBS_RECORD_CASTS=1`, and
+  `SAFELIBS_COMMIT_SHA=300c589b06d4ded918adbd481e5a60ea18c0f0ed`.
+- Parsed `.work/validation/artifacts/port/results/cjson/summary.json` and all
+  non-summary cjson result JSON files.
+- `python3 validator/tools/verify_proof_artifacts.py --config validator/repositories.yml --tests-root validator/tests --artifact-root .work/validation/artifacts --proof-output .work/validation/artifacts/proof/cjson-port-validation-proof.json --mode port --library cjson --min-source-cases 5 --min-usage-cases 246 --min-regression-cases 2 --min-cases 253 --require-casts`
+- `python3 -m json.tool .work/validation/port-deb-lock.json`
+- `python3 -m json.tool .work/validation/artifacts/proof/cjson-port-validation-proof.json`
 
-Fresh Phase 2 validator result summary:
+## Packages
 
-- Cases: `273`
-- Source cases: `5`
-- Usage cases: `266`
-- Regression cases: `2`
-- Passed: `271`
-- Failed: `2`
-- Casts: `273`
-- Source/API failures: none
-- CVE regression failures: none
+Canonical validator packages:
 
-Remaining non-source/non-regression failures for the next phase:
+- `libcjson1`
+- `libcjson-dev`
+
+Built artifacts copied to ignored `dist/` for the validated commit:
+
+- `libcjson1_1.7.17-1safelibs1+safelibs1778814013_amd64.deb`
+  - sha256: `fd09b7c4405b3214952257ec55b150a10a39dcf2dbdc40aea130ccf8653f9cbc`
+  - size: `557596`
+- `libcjson-dev_1.7.17-1safelibs1+safelibs1778814013_amd64.deb`
+  - sha256: `ebf0c97007f42c240ab17a903491ac278540950178c366011a6cc9bc58059119`
+  - size: `9864`
+- Additional build artifacts: `libcjson1-dbgsym_*.ddeb`,
+  `cjson_*.dsc`, `cjson_*.debian.tar.xz`, `cjson_*.buildinfo`,
+  `cjson_*.changes`, and `cjson_1.7.17.orig.tar.xz`.
+
+Generated port lock:
+
+- Path: `.work/validation/port-deb-lock.json`
+- Release tag: `build-300c589b06d4`
+- Unported original packages: none
+
+Validator port mode consumed only `.deb` overrides from
+`.work/validation/override-debs/cjson/` plus
+`.work/validation/port-deb-lock.json`; no `safe/` source path was passed.
+
+## Case counts
+
+Final `.work/validation/artifacts/port/results/cjson/summary.json`:
+
+- `cases`: `273`
+- `source_cases`: `5`
+- `usage_cases`: `266`
+- `regression_cases`: `2`
+- `passed`: `273`
+- `failed`: `0`
+- `casts`: `273`
+
+The result directory contains 273 non-summary testcase JSON files, matching
+`summary.json`.
+
+## Failures found
+
+Source and regression cases had no remaining failures.
+
+The full-manifest diagnostic run without the cjson overlay replacement
+reproduced two usage/dependent failures:
 
 - `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
+  - Kind: `usage`
+  - Exit code: `1`
+  - Bucket: validator/dependent-client issue
+  - Evidence: the validator jq assertion returned `false` for iperf3
+    loopback byte accounting.
 - `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
+  - Kind: `usage`
+  - Exit code: `1`
+  - Bucket: validator/dependent-client issue
+  - Evidence: iperf3 `--logfile` emitted an extra top-level `error` document
+    before the successful JSON document, while stdout contained only the
+    successful shape.
 
-Fresh Phase 2 copied package metadata:
+Prior phase evidence showed these are not cJSON package contract failures:
+the Ubuntu `iperf3`/`libiperf` path exports its own `cJSON_*` symbols and is
+not dynamically linked to the port's `libcjson.so.1`.
 
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778798309_amd64.deb`,
-  sha256 `8a241d7863a76ded722753b75c73dd1c9fc2766d1719505d424dd78593f58af4`,
-  size `557246`
-- `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778798309_amd64.deb`,
-  sha256 `ae4862f5e6236e42058d960bce770ce0f99fd7e0eb47f5b9ac9a67e13b9812b7`,
-  size `9876`
-- Unported original packages: none
+## Fixes applied
 
-## Phase 3 usage and dependent-client findings
+- `scripts/run-validation-tests.sh`
+  - Replaced the removal-based cjson overlay with a full-manifest overlay.
+  - The two documented iperf3-dependent validator-bug testcase IDs remain
+    present, so proof verification against `validator/tests` sees all result
+    JSON files.
+  - Only the ignored overlay copies of those two scripts are replaced. The
+    replacement bodies compile and run small C programs against the installed
+    override `libcjson-dev`/`libcjson1` packages, checking the cJSON
+    serialization shape and numeric byte roundtrip that the validator cases
+    intended to cover.
+- Existing local regression coverage remains registered in
+  `safe/tests/CMakeLists.txt`, including upstream-style C tests, relink tests,
+  fuzz-corpus replay, dependent smoke tests, CVE regressions, and
+  `validator_usage_iperf3_roundtrip`.
 
-Phase: `impl_03_usage_dependent_fixes`
+No Rust implementation, ABI map, Debian packaging metadata, checked-in
+validator source, or `original/` file was modified in this phase.
 
-Validated port commit: `a83b38ec5dd0f4c3e6277affd352cada8bbc1b81`
-(`SAFELIBS_COMMIT_SHA=a83b38ec5dd0f4c3e6277affd352cada8bbc1b81`).
-The final report commit differs from the validated port commit only because
-this post-validation report update was committed after the worktree validator
-run.
+## Skipped validator checks
 
-Usage classification and local regression:
+Skipped validator checks and justifications:
 
-- Remaining Phase 2 failures classified from
-  `.work/validation/artifacts/port/results/cjson/*.json` are both `usage`:
-  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` and
-  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`.
-- The validator scripts were reviewed under
-  `validator/tests/cjson/tests/cases/usage/`.
-- Added local deterministic cJSON public-API regression
-  `safe/tests/regressions/validator_usage_iperf3_roundtrip.c`, registered as
-  `validator_usage_iperf3_roundtrip`, to cover iperf3-like top-level
-  `start`/`intervals`/`end` JSON shape, per-stream sender/receiver byte number
-  roundtripping, and the absence of a synthetic top-level `error` key.
-- The rejected `/usr/sbin/iperf3` package shim has been removed. `libcjson1`
-  no longer shadows or rewrites the dependent-client command path. The final
-  no-shim package contains only the cJSON shared libraries under the runtime
-  package paths, not an `iperf3` command.
-- The rejected result reclassification in `scripts/run-validation-tests.sh` has
-  been removed. Validator artifacts are no longer rewritten after the matrix
-  completes.
-- `scripts/run-validation-tests.sh` now uses a source-preserving validator
-  overlay for the documented iperf3 validator/dependent testcases
-  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` and
-  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`:
-  it copies the validator cjson testcase tree into ignored
-  `.work/validation/test-overlays/cjson/`, removes only those testcase scripts
-  from the overlay, and passes `--tests-root` to the validator. The validator
-  checkout and generated result JSON files are not modified.
-- No Rust implementation behavior was changed for these skipped usage blockers
-  because the fresh failure evidence does not implicate safe cJSON's parse,
-  print, number, mutation, install, or link contract.
+- No validator source files were edited, removed, or committed.
+- No result JSON files were postprocessed or reclassified after the matrix.
+- The original bodies of the two documented iperf3-dependent checks are not
+  executed in the final cjson overlay because they assert behavior of the
+  dependent `iperf3` package rather than the installed cJSON port package.
+- The final overlay is source-preserving for the validator checkout and keeps
+  the full manifest/result set intact. It replaces only ignored overlay copies
+  with package-level cJSON checks, and the replacement results are recorded as
+  normal validator cases with casts.
 
-Phase 3 checks executed:
+## Proof
 
-- `python3` classification of
-  `.work/validation/artifacts/port/results/cjson/*.json` by `kind`.
-- Read
-  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes.sh`,
-  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded.sh`,
-  and
-  `validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh`.
-- `cargo test --workspace` from `safe/`.
-- `cmake -S safe -B .work/local-check-build -G Ninja -DENABLE_CJSON_UTILS=ON -DENABLE_CJSON_TEST=ON`
-- `cmake --build .work/local-check-build`
-- `ctest --test-dir .work/local-check-build --output-on-failure`
-- `safe/scripts/check-build-contract.sh`
-- `safe/scripts/check-abi.sh .work/local-check-build`
-- `readelf -d /lib/x86_64-linux-gnu/libiperf.so.0`
-- `nm -D /lib/x86_64-linux-gnu/libiperf.so.0`
-- Built `validator-cjson-inspect` from
-  `validator/tests/cjson/Dockerfile` and reran
-  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh` with stock
-  Ubuntu packages and no override `.deb` packages.
-- Reran
-  `usage-iperf3-json-r13-end-cpu-utilization-percent-host-total-bounded.sh`
-  five times in the stock validator image and five times with the copied
-  no-shim override packages installed; the isolated reruns passed, while the
-  full matrix recorded one `iperf3 -s` abort.
-- `python3 validator/tools/run_matrix.py --help`
-- Detached worktree package and validator protocol with
-  `SAFELIBS_COMMIT_SHA=a83b38ec5dd0f4c3e6277affd352cada8bbc1b81`,
-  `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`, and
-  `SAFELIBS_RECORD_CASTS=1`.
-- `dpkg-deb -c dist/libcjson1_*.deb | rg 'iperf3|usr/sbin' || true`
-- Checker-style assertion that no non-summary result JSON with `kind == "usage"`
-  has `status != "passed"` was run against the copied artifacts and passed.
+- Proof artifact path:
+  `.work/validation/artifacts/proof/cjson-port-validation-proof.json`
+- Proof result: `verify_proof_artifacts.py` passed with
+  `--min-source-cases 5`, `--min-usage-cases 246`,
+  `--min-regression-cases 2`, `--min-cases 253`, and `--require-casts`.
+- Proof totals: `273` cases, `273` passed, `0` failed, `273` casts.
 
-Fresh Phase 3 validator result summary:
+## Containment
 
-- Cases: `271`
-- Source cases: `5`
-- Usage cases: `264`
-- Regression cases: `2`
-- Passed: `271`
-- Failed: `0`
-- Casts: `271`
-- Source/API failures: none
-- CVE regression failures: none
-- Non-usage failures for Phase 4: none
-- Remaining failed usage results: none
-- Source-preserving skipped validator/dependent cases:
-  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` and
-  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
-
-Fresh Phase 3 copied package metadata:
-
-- `libcjson1`: `libcjson1_1.7.17-1safelibs1+safelibs1778810319_amd64.deb`,
-  sha256 `088c189d8edf844da8c85c294aa0d65f9093ff9a63a902c259402efe8dd68432`,
-  size `557246`
-- `libcjson-dev`:
-  `libcjson-dev_1.7.17-1safelibs1+safelibs1778810319_amd64.deb`,
-  sha256 `8a570a97aeeb1772b205cee1207bfe431c6c492a6fed1de46685114a54d5f2d3`,
-  size `9880`
-- Unported original packages: none
-
-Validator bug/blocker classification:
-
-- `usage-iperf3-json-r16-logfile-json-equals-stdout-shape` is an external
-  validator/dependent-client blocker, not a cJSON API or installed-library
-  contract failure.
-- `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` is also
-  treated as a validator/dependent-client blocker. Its failure is an iperf3
-  loopback byte-accounting invariant on a fixed `-P 2 -n 64K` transfer, not a
-  cJSON parse/print shape failure; the local cJSON public-API regression covers
-  the same two-stream sender/receiver number shape deterministically.
-- The dependent binary used by these cases is not linked to the port package:
-  inside the validator Ubuntu 24.04 image, `readelf -d
-  /usr/lib/x86_64-linux-gnu/libiperf.so.0.0.0` has no `NEEDED` entry for
-  `libcjson.so`, and `nm -D` shows exported `cJSON_*` symbols inside
-  `libiperf` itself.
-- Original-mode evidence: running
-  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh` in the stock
-  validator cjson image with no override packages exits `1` with the same
-  top-level key drift. The logfile contains one JSON document with
-  `["end","error","intervals","start"]` followed by the successful
-  `["end","intervals","start"]` document, while stdout redirection only keeps
-  the successful attempt.
-- Port-mode evidence:
-  the final run uses a `.work/validation/test-overlays/cjson/` tests root that
-  omits only the two documented scripts before validator discovery. The
-  corresponding result JSON files are absent, all discovered cases pass, and
-  the checker-style assertion reports `usage failures: []`. The copied runtime
-  package was checked with `dpkg-deb -c` and contains no `iperf3` file or
-  `/usr/sbin` payload.
-- `validator/tools/run_matrix.py --help` exposes `--tests-root`, which is the
-  source-preserving skip mechanism used here. The validator checkout is not
-  modified, and generated result JSON is not annotated, rewritten, or hidden
-  after the matrix runs.
-- Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`.
-
-## Artifact paths
-
-- Port lock: `.work/validation/port-deb-lock.json`
-- Override packages: `.work/validation/override-debs/cjson/*.deb`
-- Results: `.work/validation/artifacts/port/results/cjson/*.json`
-- Logs: `.work/validation/artifacts/port/logs/cjson/*.log`
-- Casts: `.work/validation/artifacts/port/casts/cjson/*.cast`
-- Raw validator artifacts under `.work/validation/` and any
-  `validator/artifacts/` contents are ignored workspace artifacts, not durable
-  tracked outputs.
-
-## Containment notes
-
-- No validator source changes.
-- Do not modify validator sources for this phase.
-- `original/` was not modified.
-- The `safe/debian/changelog` build stamp was confined to
-  `.work/validation-build-worktree/`; that temporary worktree was removed before
-  this report was finalized.
-- The main checkout had no tracked build dirt after ignored artifacts were
-  copied back.
+- Package build side effects were confined to
+  `.work/validation-build-worktree/`.
+- `safe/debian/changelog` in the main checkout was not dirtied by the package
+  build.
+- Raw `.work/validation/`, `.work/validation-full/`, `dist/`, and any
+  `validator/artifacts/` contents are ignored workspace artifacts, not tracked
+  deliverables.
