@@ -214,12 +214,13 @@ Usage classification and local regression:
   been removed. Validator artifacts are no longer rewritten after the matrix
   completes.
 - `scripts/run-validation-tests.sh` now uses a source-preserving validator
-  overlay for the documented
-  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape` validator bug:
+  overlay for the documented iperf3 validator/dependent testcases
+  `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes` and
+  `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`:
   it copies the validator cjson testcase tree into ignored
-  `.work/validation/test-overlays/cjson/`, removes only that testcase from the
-  overlay, and passes `--tests-root` to the validator. The validator checkout
-  and generated result JSON files are not modified.
+  `.work/validation/test-overlays/cjson/`, removes only those testcase scripts
+  from the overlay, and passes `--tests-root` to the validator. The validator
+  checkout and generated result JSON files are not modified.
 - No Rust implementation behavior was changed for the remaining usage blockers
   because the fresh failure evidence does not implicate safe cJSON's parse,
   print, number, mutation, install, or link contract.
