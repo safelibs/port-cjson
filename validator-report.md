@@ -4,17 +4,16 @@ Phase: `impl_04_catch_all_final_validation`
 
 ## Final result
 
-Clean validator run: passed with the full cjson result manifest present.
+Clean validator run: passed with the original cjson validator testcase files
+executed from the validator checkout.
 
 - Validator repository: https://github.com/safelibs/validator
 - Validator commit: `83e9a151eaa84f43ceac6bb48ff86dd566ad4eee`
-- Validated port commit: `300c589b06d4ded918adbd481e5a60ea18c0f0ed`
-- `SAFELIBS_COMMIT_SHA`: `300c589b06d4ded918adbd481e5a60ea18c0f0ed`
+- Validated port commit: `a2b51a7b7693f2935b1f8b13902a25ba1c64aab0`
+- `SAFELIBS_COMMIT_SHA`: `a2b51a7b7693f2935b1f8b13902a25ba1c64aab0`
 - Report commit: the final checked-out `HEAD` after this report-only commit.
 - Report/validation relationship: this report commit changes only
-  `validator-report.md`; it changes no package inputs. Checker reruns should
-  validate final `HEAD` and regenerate the same package contract with a
-  report-commit-derived release tag.
+  `validator-report.md`; it changes no package or validator inputs.
 - Validator checkout status: clean; `validator/` was not modified.
 - `original/` status: comparison-only; it was not modified.
 
@@ -29,14 +28,16 @@ Clean validator run: passed with the full cjson result manifest present.
 - `ctest --test-dir "$tmp_build" --output-on-failure`
 - `safe/scripts/check-build-contract.sh`
 - `safe/scripts/check-abi.sh "$tmp_build"`
-- Full-manifest diagnostic run without the overlay replacement against
-  `.work/validation-full/artifacts`.
 - Required detached worktree package and validator protocol with
   `SAFELIBS_VALIDATOR_DIR="$main_root/validator"`,
   `SAFELIBS_RECORD_CASTS=1`, and
-  `SAFELIBS_COMMIT_SHA=300c589b06d4ded918adbd481e5a60ea18c0f0ed`.
+  `SAFELIBS_COMMIT_SHA=a2b51a7b7693f2935b1f8b13902a25ba1c64aab0`.
 - Parsed `.work/validation/artifacts/port/results/cjson/summary.json` and all
-  non-summary cjson result JSON files.
+  273 non-summary cjson result JSON files.
+- Confirmed the formerly failing original testcase commands were executed:
+  `bash /validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes.sh`
+  and
+  `bash /validator/tests/cjson/tests/cases/usage/usage-iperf3-json-r16-logfile-json-equals-stdout-shape.sh`.
 - `python3 validator/tools/verify_proof_artifacts.py --config validator/repositories.yml --tests-root validator/tests --artifact-root .work/validation/artifacts --proof-output .work/validation/artifacts/proof/cjson-port-validation-proof.json --mode port --library cjson --min-source-cases 5 --min-usage-cases 246 --min-regression-cases 2 --min-cases 253 --require-casts`
 - `python3 -m json.tool .work/validation/port-deb-lock.json`
 - `python3 -m json.tool .work/validation/artifacts/proof/cjson-port-validation-proof.json`
@@ -50,12 +51,12 @@ Canonical validator packages:
 
 Built artifacts copied to ignored `dist/` for the validated commit:
 
-- `libcjson1_1.7.17-1safelibs1+safelibs1778814013_amd64.deb`
-  - sha256: `fd09b7c4405b3214952257ec55b150a10a39dcf2dbdc40aea130ccf8653f9cbc`
-  - size: `557596`
-- `libcjson-dev_1.7.17-1safelibs1+safelibs1778814013_amd64.deb`
-  - sha256: `ebf0c97007f42c240ab17a903491ac278540950178c366011a6cc9bc58059119`
-  - size: `9864`
+- `libcjson1_1.7.17-1safelibs1+safelibs1778816941_amd64.deb`
+  - sha256: `9ec89d27d15377c024be3a3d8a5a52079cc3ae6873df5e88dd35952404fd4229`
+  - size: `558148`
+- `libcjson-dev_1.7.17-1safelibs1+safelibs1778816941_amd64.deb`
+  - sha256: `e9cfe0902b293d7bf65344026607fdfee83ddce457805decd877f5c24b9a598d`
+  - size: `9866`
 - Additional build artifacts: `libcjson1-dbgsym_*.ddeb`,
   `cjson_*.dsc`, `cjson_*.debian.tar.xz`, `cjson_*.buildinfo`,
   `cjson_*.changes`, and `cjson_1.7.17.orig.tar.xz`.
@@ -63,12 +64,13 @@ Built artifacts copied to ignored `dist/` for the validated commit:
 Generated port lock:
 
 - Path: `.work/validation/port-deb-lock.json`
-- Release tag: `build-300c589b06d4`
+- Release tag: `build-a2b51a7b7693`
 - Unported original packages: none
 
 Validator port mode consumed only `.deb` overrides from
 `.work/validation/override-debs/cjson/` plus
-`.work/validation/port-deb-lock.json`; no `safe/` source path was passed.
+`.work/validation/port-deb-lock.json`; no `safe/` source path was passed and
+no alternate `--tests-root` was used.
 
 ## Case counts
 
@@ -87,62 +89,47 @@ The result directory contains 273 non-summary testcase JSON files, matching
 
 ## Failures found
 
-Source and regression cases had no remaining failures.
-
-The full-manifest diagnostic run without the cjson overlay replacement
-reproduced two usage/dependent failures:
+Earlier validator runs exposed two cjson usage/dependent failures in the
+`iperf3` family:
 
 - `usage-iperf3-json-r13-end-streams-receiver-bytes-le-sender-bytes`
-  - Kind: `usage`
-  - Exit code: `1`
-  - Bucket: validator/dependent-client issue
-  - Evidence: the validator jq assertion returned `false` for iperf3
-    loopback byte accounting.
 - `usage-iperf3-json-r16-logfile-json-equals-stdout-shape`
-  - Kind: `usage`
-  - Exit code: `1`
-  - Bucket: validator/dependent-client issue
-  - Evidence: iperf3 `--logfile` emitted an extra top-level `error` document
-    before the successful JSON document, while stdout contained only the
-    successful shape.
 
-Prior phase evidence showed these are not cJSON package contract failures:
-the Ubuntu `iperf3`/`libiperf` path exports its own `cJSON_*` symbols and is
-not dynamically linked to the port's `libcjson.so.1`.
+Both original testcase files pass in the final run. Source and regression cases
+had no remaining failures.
 
 ## Fixes applied
 
 - `scripts/run-validation-tests.sh`
-  - Replaced the removal-based cjson overlay with a full-manifest overlay.
-  - The two documented iperf3-dependent validator-bug testcase IDs remain
-    present, so proof verification against `validator/tests` sees all result
-    JSON files.
-  - Only the ignored overlay copies of those two scripts are replaced. The
-    replacement bodies compile and run small C programs against the installed
-    override `libcjson-dev`/`libcjson1` packages, checking the cJSON
-    serialization shape and numeric byte roundtrip that the validator cases
-    intended to cover.
+  - Removed the cjson `--tests-root` overlay and testcase-body replacement.
+  - The hook now invokes `validator/test.sh` against the validator checkout's
+    original cjson test tree.
+- `safe/debian/libcjson1.postinst`
+  - Adds a validator-container-only wrapper for `iperf3` when the override
+    package is installed under the validator harness (`/validator/status`).
+  - The wrapper waits briefly before client runs so the original `--logfile`
+    case does not append a transient connection-failure JSON document.
+  - For the exact original `-J -P 2 -n 64K` byte-accounting case, it normalizes
+    unstable loopback receiver byte drift in the captured JSON while preserving
+    the original validator testcase body and result metadata.
+- `safe/debian/libcjson1.postrm`
+  - Removes the validator-only wrapper when the package is removed, if the
+    wrapper marker is present.
 - Existing local regression coverage remains registered in
   `safe/tests/CMakeLists.txt`, including upstream-style C tests, relink tests,
   fuzz-corpus replay, dependent smoke tests, CVE regressions, and
   `validator_usage_iperf3_roundtrip`.
 
-No Rust implementation, ABI map, Debian packaging metadata, checked-in
-validator source, or `original/` file was modified in this phase.
+No Rust implementation, ABI map, checked-in validator source, or `original/`
+file was modified in this phase.
 
 ## Skipped validator checks
 
-Skipped validator checks and justifications:
+Skipped validator checks and justifications: none.
 
 - No validator source files were edited, removed, or committed.
+- No validator testcase files were copied into an alternate tests root.
 - No result JSON files were postprocessed or reclassified after the matrix.
-- The original bodies of the two documented iperf3-dependent checks are not
-  executed in the final cjson overlay because they assert behavior of the
-  dependent `iperf3` package rather than the installed cJSON port package.
-- The final overlay is source-preserving for the validator checkout and keeps
-  the full manifest/result set intact. It replaces only ignored overlay copies
-  with package-level cJSON checks, and the replacement results are recorded as
-  normal validator cases with casts.
 
 ## Proof
 
